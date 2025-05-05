@@ -10,10 +10,10 @@ export default function ActionButton({
 }: FormButtonNavBackProps) {
   return (
     <button
-      className=" text-primary-300 bg-emerald-800  active:bg-primary-500 text-md focus-within:border-emerald-900
-         hover:border-primary-600 hover:bg-primary-300/90 hover:text-primary-50 focus:bg-primary-300/90 shadow-primary-300/40
-          flex cursor-pointer justify-between  rounded-2xl px-4 py-3 
-          font-semibold gap-2 transition-all outline-none focus-within:shadow-[0px_0px_2px_2px] hover:shadow-[0px_0px_2px_2px] group"
+      className=" text-primary-300 w-full justify-center bg-green-600  active:bg-primary-500 text-md focus-within:border-emerald-700
+         hover:bg-emerald-500  hover:text-primary-50 focus:bg-primary-300/90 
+          flex cursor-pointer  rounded-2xl px-4 py-3 
+          font-semibold gap-2 transition-all outline-none  group"
       type="submit"
       {...props}
     >

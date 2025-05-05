@@ -14,7 +14,7 @@ export default async function getAllProdutos() {
     do {
       const { url } = GET_ALL_PRODUTOS(pagina);
       const response = await fetch(url, {
-        method: "GET",
+        method: "GET", 
         next: {
           tags: ["all-products"],
         },
@@ -26,6 +26,7 @@ export default async function getAllProdutos() {
 
       const produtosPagina = data.retorno.produtos || [];
       todosProdutos.push(...produtosPagina);
+
 
       // Pega o total de páginas da resposta
       totalPaginas = Number(data.retorno.numero_paginas || 1);

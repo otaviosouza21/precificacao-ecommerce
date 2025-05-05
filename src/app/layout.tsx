@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Poppins } from "next/font/google";
 import "./globals.css";
+import MainHeader from "@/components/Ui/Header/MainHeader";
 
 
 
@@ -22,10 +23,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <body
-        className={`${poppins.variable}  antialiased`}
+        className={`${poppins.variable}  antialiased `}
       >
+        <MainHeader />
         {children}
       </body>
     </html>
