@@ -18,7 +18,7 @@ export default function ActionButton({
       {...props}
     >
       {Icon && (
-        <Icon className=" text-primary-300 group-hover:text-primary-50" />
+        <Icon className="text-primary-300 group-hover:text-primary-50" />
       )}
       {text}
     </button>
