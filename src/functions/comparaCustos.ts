@@ -42,6 +42,9 @@ export function compararCustos(
   for (const item of produtosTiny) {
     const codigoTiny = item.produto.codigo;
     const descricaoTiny = item.produto.nome;
+    const idTiny = item.produto.id;
+    const precoTiny = item.produto.preco;
+
     const linhaPlanilha = mapaPlanilha.get(codigoTiny);
 
     if (!linhaPlanilha) {
@@ -68,6 +71,8 @@ export function compararCustos(
 
     if (custoPlanilha !== custoTiny) {
       alterados.push({
+        id: idTiny,
+        preco: precoTiny,
         codigo: codigoTiny,
         custoTiny: custoTiny.toFixed(2),
         custoPlanilha: custoPlanilha.toFixed(2),
@@ -75,6 +80,8 @@ export function compararCustos(
       });
     } else {
       iguais.push({
+        id: idTiny,
+        preco: precoTiny,
         codigo: codigoTiny,
         custoTiny: custoTiny.toFixed(2),
         custoPlanilha: custoPlanilha.toFixed(2),

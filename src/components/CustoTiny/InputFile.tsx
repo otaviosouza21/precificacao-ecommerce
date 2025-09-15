@@ -32,6 +32,7 @@ export default function InputFile({
       const sheet = workbook.SheetNames[0]; // Primeira aba
       const worksheet = workbook.Sheets[sheet];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    
 
       console.log("Planilha:", sheet);
       console.log("Dados:", jsonData);

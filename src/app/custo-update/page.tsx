@@ -1,5 +1,6 @@
 import getAllProdutos from "@/actions/getAllProdutos";
 import CustoTiny from "@/components/CustoTiny/CustoTiny";
+export const dynamic = "force-dynamic";
 
 export default async function CustoUpdatePage() {
   const produtosReturnApi = await getAllProdutos();

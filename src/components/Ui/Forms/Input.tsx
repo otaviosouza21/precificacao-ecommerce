@@ -1,4 +1,3 @@
-import { Search } from "lucide-react";
 import { ElementType, InputHTMLAttributes } from "react";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -20,7 +19,11 @@ export default function Input({
 }: InputProps) {
   return (
     <div className="flex flex-col font-medium justify-center ">
-      {label && <label className="font-md" htmlFor={id}>{label}</label>}
+      {label && (
+        <label className="font-md" htmlFor={id}>
+          {label}
+        </label>
+      )}
       <div
         className={`focus-within:border-primary-600 flex- hover:border-sky-700 shadow-primary-300/40 flex items-center justify-center 
           gap-2 rounded-[10px] border-2 border-transparent bg-gray-400/35 pl-4 text-gray-50 transition-all outline-none

@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Poppins } from "next/font/google";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 import MainHeader from "@/components/Ui/Header/MainHeader";
-
-
+import { ToastContainer } from "react-toastify";
 
 const poppins = Poppins({
   variable: "--font-poppins",
- style: "normal",
- subsets: ["latin"],
- weight: ["400","500", "600", "700", "800"] 
+  style: "normal",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
   title: "Precificação Ecommerce",
-  description: "Aplicação para automatizar precificação do ecommerce com a api tiny",
+  description:
+    "Aplicação para automatizar precificação do ecommerce com a api tiny",
 };
 
 export default function RootLayout({
@@ -24,11 +24,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body
-        className={`${poppins.variable}  antialiased `}
-      >
+      <body className={`${poppins.variable}  antialiased flex `}>
         <MainHeader />
-        {children}
+        <div className="ml-15 w-full">{children}</div>
+        <ToastContainer />
       </body>
     </html>
   );
