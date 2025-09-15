@@ -1,4 +1,4 @@
-"use client";
+/* "use client";
 
 import { CheckCircle, Loader2, Sheet } from "lucide-react";
 import { Dispatch, SetStateAction, useState } from "react";
@@ -76,9 +76,10 @@ export default function InputFile({
       {uploadStatus === "success" && (
         <div className="flex items-center self-center gap-2 mt-2 text-green-300 text-sm">
           <CheckCircle className="w-4 h-4" />
-          Planilha "{sheetName}" carregada com sucesso!
+          Planilha `{sheetName}` carregada com sucesso!
         </div>
       )}
     </div>
   );
 }
+ */

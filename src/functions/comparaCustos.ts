@@ -1,4 +1,4 @@
-import { ProdutoApi } from "@/api/types/api-types";
+/* import { ProdutoApi } from "@/api/types/api-types";
 
 export type ComparacaoResultado = {
   alterados: any[];
@@ -99,3 +99,4 @@ export function compararCustos(
 
   return { alterados, iguais, naoEncontrados, todos };
 }
+ */

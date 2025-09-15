@@ -73,7 +73,7 @@ export default function ReadXlsx({
             {uploadStatus === "success" && (
                 <div className="flex items-center self-center gap-2 mt-2 text-green-300 text-sm">
                     <CheckCircle className="w-4 h-4" />
-                    Planilha "{sheetName}" carregada com sucesso!
+                    Planilha `{sheetName}` carregada com sucesso!
                 </div>
             )}
         </div>

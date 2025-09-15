@@ -8,9 +8,7 @@ import { TitulosReceberApiTiny } from "@/api/types/api-types";
 import TituloLista from "./TitulosLista/TituloLista";
 import { calculaTaxas } from "./functions/formataDados";
 
-type RecebidosConciliadosProps = TitulosReceberApiTiny & {
-    valorRecebidoEcommerce: number
-}
+
 
 export type ConciliacaoItem = {
     id_ecommerce: string;
@@ -107,9 +105,6 @@ export default function TitulosEcommerce() {
 
     }, [dataPlanilha, tituloAReceber]);
 
-    const calculaDiferenca = (valorRecebido: number, valorCalculado: number) => {
-        return (valorRecebido - valorCalculado)
-    }
 
     if (error) {
         return (

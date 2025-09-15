@@ -1,4 +1,4 @@
-"use client";
+/* "use client";
 
 import { ArrowDown, ArrowUp, HandCoins } from "lucide-react";
 import TitlePrimary from "../Ui/TitlePrimary";
@@ -7,7 +7,6 @@ import { useState } from "react";
 import ActionButton from "../Ui/Forms/ActionButton";
 import { ProdutoApi } from "@/api/types/api-types";
 import { ComparacaoResultado, compararCustos } from "@/functions/comparaCustos";
-import { useRouter } from "next/navigation";
 import ResultCards from "./ResultCards/ResultCards";
 import AtualizaCustoButton from "./ResultCards/AtualizaCustoButton";
 
@@ -26,7 +25,6 @@ export default function CustoTiny({
     "alterados" | "iguais" | "todos"
   >("alterados");
 
-  const router = useRouter();
 
   function diferencaPercentual(erp: number, tiny: number) {
     const diferenca = ((tiny - erp) / erp) * 100;
@@ -102,13 +100,13 @@ export default function CustoTiny({
               </tr>
             </thead>
             <tbody className="">
-              {resultadoComparacao[relatorioExibido].map((pAlt) => {
+              {resultadoComparacao[relatorioExibido].map((pAlt,index) => {
                 const { valorFormatado, icone, cor } = diferencaPercentual(
                   pAlt.custoPlanilha,
                   pAlt.custoTiny
                 );
                 return (
-                  <tr className="shadow rounded-2xl  hover:bg-blue-100/60 *:py-2 *:px-3 *:text-start  ">
+                  <tr key={index} className="shadow rounded-2xl  hover:bg-blue-100/60 *:py-2 *:px-3 *:text-start  ">
                     <td>{pAlt.codigo}</td>
                     <td>{pAlt.descricao}</td>
                     <td className="">{pAlt.custoTiny}</td>
@@ -129,3 +127,4 @@ export default function CustoTiny({
     </section>
   );
 }
+ */

@@ -1,4 +1,4 @@
-import { ComparacaoResultado } from "@/functions/comparaCustos";
+/* import { ComparacaoResultado } from "@/functions/comparaCustos";
 import ResultCard from "./ResultCard";
 
 type ResultCardsProps = {
@@ -49,3 +49,4 @@ export default function ResultCards({
     </div>
   );
 }
+ */

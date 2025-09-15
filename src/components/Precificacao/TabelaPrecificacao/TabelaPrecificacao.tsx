@@ -1,7 +1,5 @@
 import { ProdutoApi } from "@/api/types/api-types";
-import { brlConvert } from "@/functions/brlConvert";
 import { marketplaceParamsTypes } from "../Precificacao";
-import { useState } from "react";
 import TabelProduto from "./TabelaProduto";
 
 export default function TabelaPrecificacao({
@@ -47,7 +45,7 @@ export default function TabelaPrecificacao({
           </tr>
         </thead>
         <tbody>
-          {produtos.map((produto, index) => {
+          {produtos.map((produto) => {
             return (
               <TabelProduto
                 key={produto.produto.id}

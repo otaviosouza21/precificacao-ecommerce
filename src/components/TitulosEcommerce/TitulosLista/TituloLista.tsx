@@ -3,7 +3,7 @@ import { ConciliacaoItem } from "../TitulosEcommerce";
 import { baixarTituloTiny, BaixaTituloParams } from "@/actions/baixaTituloTiny";
 import { toast } from "react-toastify";
 import { Dispatch, SetStateAction, useState } from "react";
-import { calculaTaxas, formatCurrency, formatDate } from "../functions/formataDados";
+import { formatCurrency, formatDate } from "../functions/formataDados";
 
 type TituloListaProps = {
     recebidosConciliados: ConciliacaoItem[]
@@ -58,7 +58,7 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
         let erros = 0;
 
         for (const selectedId of selectedItems) {
-            const [id, idxStr] = selectedId.split('-');
+            const [idxStr] = selectedId.split('-');
             const idx = parseInt(idxStr);
             const item = recebidosConciliados[idx];
             
@@ -83,6 +83,7 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
                         erros++;
                     }
                 } catch (error) {
+                    console.log(error)
                     erros++;
                 }
             }

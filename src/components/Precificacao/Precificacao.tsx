@@ -1,9 +1,7 @@
 "use client";
 
-import { ShoppingBag } from "lucide-react";
 import TitlePrimary from "../Ui/TitlePrimary";
 import InputParametros from "./InputParametros";
-import MarketplaceCardParams from "./MarketplaceCardParams";
 import TabelaProdutos from "./TabelaPrecificacao/TabelaPrecificacao";
 import { ProdutoApi } from "@/api/types/api-types";
 import { useState } from "react";
