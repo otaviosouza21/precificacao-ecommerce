@@ -152,7 +152,7 @@ export default function ApurarComissao() {
     });
   }, [dadosMock, filtros]);
 
-  const togglePedidoExpandido = (pedidoId) => {
+  const togglePedidoExpandido = (pedidoId: string) => {
     const novosExpandidos = new Set(pedidosExpandidos);
     if (novosExpandidos.has(pedidoId)) {
       novosExpandidos.delete(pedidoId);
@@ -162,14 +162,14 @@ export default function ApurarComissao() {
     setPedidosExpandidos(novosExpandidos);
   };
 
-  const formatarMoeda = (valor) => {
+  const formatarMoeda = (valor: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(valor);
   };
 
-  const formatarData = (data) => {
+  const formatarData = (data: string) => {
     return new Date(data).toLocaleDateString('pt-BR');
   };
 
