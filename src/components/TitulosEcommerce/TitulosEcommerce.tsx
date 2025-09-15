@@ -131,6 +131,16 @@ export default function TitulosEcommerce() {
                     <span className="ml-2 text-gray-600">Carregando títulos...</span>
                 </div>
             )}
+             {dataPlanilha && tituloAReceber && (
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
+                    <h3 className="font-semibold text-blue-800 mb-2">Resumo:</h3>
+                    <p className="text-blue-700">
+                        <strong>Planilha:</strong> {dataPlanilha.length} itens |
+                        <strong> Títulos Tiny:</strong> {tituloAReceber.length} itens |
+                        <strong> Conciliados:</strong> {recebidosConciliados?.length || 0} itens
+                    </p>
+                </div>
+            )}
 
             {recebidosConciliados && recebidosConciliados.length > 0 && (
                 <div className="mt-6">
@@ -152,16 +162,7 @@ export default function TitulosEcommerce() {
                 </div>
             )}
 
-            {dataPlanilha && tituloAReceber && (
-                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
-                    <h3 className="font-semibold text-blue-800 mb-2">Resumo:</h3>
-                    <p className="text-blue-700">
-                        <strong>Planilha:</strong> {dataPlanilha.length} itens |
-                        <strong> Títulos Tiny:</strong> {tituloAReceber.length} itens |
-                        <strong> Conciliados:</strong> {recebidosConciliados?.length || 0} itens
-                    </p>
-                </div>
-            )}
+    
 
 
         </div>

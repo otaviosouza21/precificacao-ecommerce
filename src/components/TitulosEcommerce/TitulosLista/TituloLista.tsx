@@ -61,7 +61,7 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
             const [idxStr] = selectedId.split('-');
             const idx = parseInt(idxStr);
             const item = recebidosConciliados[idx];
-            
+
             if (item) {
                 try {
                     const retorno = await baixarTituloTiny({
@@ -76,7 +76,7 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
                         valorJuros: 0,
                         valorTaxas: item.valor_taxas
                     });
-                    
+
                     if (retorno.success) {
                         sucessos++;
                     } else {
@@ -92,7 +92,7 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
         setIsProcessing(false);
         setSelectedItems(new Set());
         setAtualizar(!atualizar);
-        
+
         if (sucessos > 0) {
             toast.success(`${sucessos} título(s) baixado(s) com sucesso`);
         }
@@ -122,7 +122,7 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
                         )}
                         {isAllSelected ? 'Desmarcar todos' : 'Selecionar todos'}
                     </button>
-                    
+
                     {selectedItems.size > 0 && (
                         <span className="text-sm text-slate-600">
                             {selectedItems.size} de {recebidosConciliados.length} selecionados
@@ -147,8 +147,8 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-200">
                         <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
-                            <tr>
-                                <th className="px-6 py-4 text-left">
+                            <tr className="">
+                                <th className="px-6 py-4  text-left">
                                     <span className="sr-only">Seleção</span>
                                 </th>
                                 <th className="px-6 py-4 text-left">
@@ -162,21 +162,22 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
                                 </th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                                     <div className="flex flex-col">
-                                        <span>Recebido</span>
-                                        <span className="text-orange-500 font-bold text-xs">Shopee</span>
+                                        <span>Título</span>
+                                        <span className="text-blue-500 font-bold text-xs">Tiny</span>
                                     </div>
                                 </th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                                     Taxas
                                 </th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                                    <div className="flex flex-col">
-                                        <span>Título</span>
-                                        <span className="text-blue-500 font-bold text-xs">Tiny</span>
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                                     Valor Calculado
+                                </th>
+
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                                    <div className="flex flex-col">
+                                        <span>Recebido</span>
+                                        <span className="text-orange-500 font-bold text-xs">Shopee</span>
+                                    </div>
                                 </th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                                     Data Recebido
@@ -197,16 +198,15 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
                                 const isValorCompativel = valorDiferenca < 0.01;
 
                                 return (
-                                    <tr 
-                                        key={itemId} 
-                                        className={`transition-all duration-200 hover:bg-slate-50 ${
-                                            isSelected ? 'bg-blue-50 ring-2 ring-blue-200 ring-inset' : ''
-                                        }`}
+                                    <tr
+                                        key={itemId}
+                                        className={`transition-all duration-200 hover:bg-slate-50 ${isSelected ? 'bg-blue-50 ring-2 ring-blue-200 ring-inset' : ''
+                                            }`}
                                     >
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-4 py-4 whitespace-nowrap">
                                             <button
                                                 onClick={() => handleSelectItem(itemId)}
-                                                className="p-1 hover:bg-slate-100 rounded transition-colors"
+                                                className="p-0 hover:bg-slate-100 rounded transition-colors"
                                             >
                                                 {isSelected ? (
                                                     <CheckSquare className="h-5 w-5 text-blue-600" />
@@ -238,20 +238,20 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                                             {item.id_ecommerce}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                                        <td className="px-6 truncate py-4 whitespace-nowrap text-sm text-slate-700">
                                             {item.cliente || '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                                            {formatCurrency(item.valor_recebido)}
+                                            {formatCurrency(item.valor_titulo)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
                                             {formatCurrency(item.valor_taxas)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                                            {formatCurrency(item.valor_titulo)}
+                                            {formatCurrency(item.valor_calculado)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                                            {formatCurrency(item.valor_calculado)}
+                                            {formatCurrency(item.valor_recebido)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
                                             {formatDate(item.data_recebimento)}
@@ -260,11 +260,10 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
                                             {item.documento || '-'}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
-                                                isValorCompativel
-                                                    ? 'bg-green-100 text-green-800 ring-1 ring-green-600/20'
-                                                    : 'bg-amber-100 text-amber-800 ring-1 ring-amber-600/20'
-                                            }`}>
+                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${isValorCompativel
+                                                ? 'bg-green-100 text-green-800 ring-1 ring-green-600/20'
+                                                : 'bg-amber-100 text-amber-800 ring-1 ring-amber-600/20'
+                                                }`}>
                                                 {isValorCompativel ? (
                                                     <>
                                                         <Check className="h-3 w-3 mr-1" />
