@@ -27,7 +27,7 @@ export default function ReadXlsx({
         reader.onload = (event) => {
             const data = new Uint8Array(event.target?.result as ArrayBuffer);
             const workbook = XLSX.read(data, { type: "array" });
-
+            console.log(workbook.SheetNames);
             const sheet = workbook.SheetNames[2]; // Primeira aba
             const worksheet = workbook.Sheets[sheet];
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
