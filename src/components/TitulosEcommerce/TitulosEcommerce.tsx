@@ -121,7 +121,7 @@ export default function TitulosEcommerce() {
 
     return (
         <div className="p-4 max-w-7xl mx-auto">
-            <h1 className="text-2xl font-bold mb-6 text-gray-800">
+            <h1 className="text-2xl text-white font-bold mb-6">
                 Conciliação de Títulos E-commerce
             </h1>
 
@@ -133,26 +133,25 @@ export default function TitulosEcommerce() {
                     <span className="ml-2 text-gray-600">Carregando títulos...</span>
                 </div>
             )}
-             {dataPlanilha && tituloAReceber && (
-                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
-                    <h3 className="font-semibold text-blue-800 mb-2">Resumo:</h3>
-                    <p className="text-blue-700">
-                        <strong>Planilha:</strong> {dataPlanilha.length} itens |
-                        <strong> Títulos Tiny:</strong> {tituloAReceber.length} itens |
-                        <strong> Conciliados:</strong> {recebidosConciliados?.length || 0} itens
-                    </p>
-                </div>
-            )}
+
 
             {recebidosConciliados && recebidosConciliados.length > 0 && (
                 <div className="mt-6">
-                    <h2 className="text-xl font-semibold mb-4 text-gray-700">
-                        Títulos Conciliados ({recebidosConciliados.length})
-                    </h2>
-
+            
+                    {dataPlanilha && tituloAReceber && (
+                        <div className="mt-6 p-4 bg-blue-50 mb-6 border border-blue-200 rounded-xl">
+                            <h3 className="font-semibold text-blue-800 mb-2">Resumo:</h3>
+                            <p className="text-blue-700">
+                                <strong>Planilha:</strong> {dataPlanilha.length} itens |
+                                <strong> Títulos em aberto Tiny:</strong> {tituloAReceber.length} itens |
+                                <strong> Conciliados:</strong> {recebidosConciliados?.length || 0} itens
+                            </p>
+                        </div>
+                    )}
                     <TituloLista atualizar={atualizar} setAtualizar={setAtualizar} recebidosConciliados={recebidosConciliados} />
                 </div>
             )}
+
 
             {recebidosConciliados && recebidosConciliados.length === 0 && (
                 <div className="mt-6 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
@@ -164,7 +163,7 @@ export default function TitulosEcommerce() {
                 </div>
             )}
 
-    
+
 
 
         </div>
