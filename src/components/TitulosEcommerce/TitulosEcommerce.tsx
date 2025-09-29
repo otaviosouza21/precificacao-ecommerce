@@ -17,6 +17,7 @@ export type ConciliacaoItem = {
     valor_titulo: number;
     valor_calculado: number;
     valor_taxas: number;
+    cupom_rebate: number;
     historico?: string;
     cliente?: string;
     data_recebimento: string;
@@ -82,8 +83,9 @@ export default function TitulosEcommerce() {
                         descricao_anuncio: planilhaItem.nome_anuncio,
                         valor_recebido: +planilhaItem.valor_recebido,
                         valor_titulo: +tituloRelacionado.conta.valor,
-                        valor_calculado: calculaTaxas(+tituloRelacionado.conta.valor).valorCalculado,
-                        valor_taxas: calculaTaxas(+tituloRelacionado.conta.valor).valorTaxa,
+                        valor_calculado: +calculaTaxas(+tituloRelacionado.conta.valor).valorCalculado.toFixed(2),
+                        valor_taxas: +calculaTaxas(+tituloRelacionado.conta.valor).valorTaxa.toFixed(2),
+                        cupom_rebate: +planilhaItem.cupom_rebate,
                         historico: tituloRelacionado.conta.historico,
                         cliente: tituloRelacionado.conta.nome_cliente,
                         data_recebimento: planilhaItem.dt_conclusao,

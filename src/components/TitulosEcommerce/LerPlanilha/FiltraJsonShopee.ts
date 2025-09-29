@@ -3,6 +3,7 @@ export interface ObjetoPlanilhaFinal {
   nome_anuncio: string;
   dt_conclusao: string;
   valor_recebido: string;
+  cupom_rebate: number;
 }
 
 export type PlanilhaXlsx = [
@@ -16,7 +17,16 @@ export type PlanilhaXlsx = [
   string,
   string,
   number,
-  string
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  number
+ 
 ][];
 
 export default function LimpaJsonShopee(planilhaData: PlanilhaXlsx) {
@@ -39,6 +49,7 @@ export function CriaObjetoPlanilha(planilha: PlanilhaXlsx) {
       nome_anuncio: item[5],
       dt_conclusao: item[7],
       valor_recebido: item[10],
+      cupom_rebate: item[18],
     } as ObjetoPlanilhaFinal;
   });
 }

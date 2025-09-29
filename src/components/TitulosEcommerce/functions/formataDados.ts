@@ -1,6 +1,6 @@
 export const calculaTaxas = (valor_titulo: number) => {
-  const valorCalculado = valor_titulo - valor_titulo * 0.2 - 4;
-  const valorTaxa = valor_titulo - valorCalculado;
+  const valorCalculado = (valor_titulo - valor_titulo * 0.2 - 4);
+  const valorTaxa = (valor_titulo - valorCalculado);
   return {
     valorCalculado,
     valorTaxa,

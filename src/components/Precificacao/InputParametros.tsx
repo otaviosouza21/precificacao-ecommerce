@@ -1,7 +1,5 @@
 "use client";
 
-import { Calculator } from "lucide-react";
-import ActionButton from "../Ui/Forms/ActionButton";
 import Input from "../Ui/Forms/Input";
 import { marketplaceParamsTypes } from "./Precificacao";
 import { Dispatch, SetStateAction, useState } from "react";
@@ -13,7 +11,6 @@ export type InputParametrosType = {
 
 export default function InputParametros({
   marketplaceParams,
-  setMarketplaceParams,
 }: InputParametrosType) {
   const [tempParams, setTempParams] = useState(marketplaceParams);
 
@@ -56,7 +53,7 @@ export default function InputParametros({
         value={tempParams.impostos}
         onChange={(e) => handleChangeTempParam("impostos", parseFloat(e.target.value))}
       />
-      <ActionButton icon={Calculator} text="Calcular" onClick={()=> setMarketplaceParams(tempParams)} />
+{/*       <ActionButton icon={Calculator} textDefault="Calcular" onClick={()=> setMarketplaceParams(tempParams)} /> */}
     </div>
   );
 }

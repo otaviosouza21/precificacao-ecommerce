@@ -1,9 +1,12 @@
 import { Check, CheckSquare, Square, Plus } from "lucide-react";
 import { ConciliacaoItem } from "../TitulosEcommerce";
-import { baixarTituloTiny, BaixaTituloParams } from "@/actions/baixaTituloTiny";
+import { baixarTituloTiny } from "@/actions/baixaTituloTiny";
 import { toast } from "react-toastify";
 import { Dispatch, SetStateAction, useState } from "react";
 import { formatCurrency, formatDate } from "../functions/formataDados";
+import BaixaButton from "@/components/Ui/Forms/BaixaButton";
+import { CopyButton } from "@/components/Ui/CopyButton";
+import TituloTaxas from "./TituloTaxas";
 
 type TituloListaProps = {
     recebidosConciliados: ConciliacaoItem[]
@@ -14,10 +17,37 @@ type TituloListaProps = {
 export default function TituloLista({ recebidosConciliados, atualizar, setAtualizar }: TituloListaProps) {
     const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
     const [isProcessing, setIsProcessing] = useState(false);
+    const [processingItems, setProcessingItems] = useState<Set<string>>(new Set());
 
-    const baixaTitulo = (dados: BaixaTituloParams) => {
+    const baixaTitulo = (titulo: ConciliacaoItem, index: number) => {
+        if (titulo.valor_calculado !== titulo.valor_recebido) {
+            toast.error("O valor recebido é diferente do valor calculado, não é possivel baixar o título")
+            return
+        }
+
         async function baixar() {
-            const retorno = await baixarTituloTiny(dados)
+            const itemId = `${titulo.id}-${index}`;
+            setProcessingItems(prev => new Set(prev).add(itemId));
+
+            const retorno = await baixarTituloTiny({
+                id: titulo.id,
+                data_recebimento: titulo.data_recebimento,
+                categoria: 'Venda Shopee',
+                historico: '',
+                valorPago: titulo.valor_recebido,
+                contaDestino: "Caixa",
+                valorAcrescimo: 0,
+                valorDesconto: 0,
+                valorJuros: 0,
+                valorTaxas: titulo.valor_taxas
+            })
+
+            setProcessingItems(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(itemId);
+                return newSet;
+            });
+
             if (retorno.success) {
                 setAtualizar(!atualizar)
                 toast.success(retorno.message)
@@ -58,9 +88,10 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
         let erros = 0;
 
         for (const selectedId of selectedItems) {
-            const [idxStr] = selectedId.split('-');
+            const [idStr, idxStr] = selectedId.split('-');
             const idx = parseInt(idxStr);
             const item = recebidosConciliados[idx];
+            console.log(idStr)
 
             if (item) {
                 try {
@@ -105,7 +136,7 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
     const isSomeSelected = selectedItems.size > 0 && selectedItems.size < recebidosConciliados.length;
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 w-full">
             {/* Header com ações em lote */}
             <div className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
                 <div className="flex items-center gap-3">
@@ -158,6 +189,9 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
                                     ID E-commerce
                                 </th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                                    Status
+                                </th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                                     Cliente
                                 </th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
@@ -185,16 +219,15 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                                     Documento
                                 </th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                                    Status
-                                </th>
+
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-slate-100">
                             {recebidosConciliados.map((item, idx) => {
                                 const itemId = `${item.id}-${idx}`;
                                 const isSelected = selectedItems.has(itemId);
-                                const valorDiferenca = Math.abs(item.valor_recebido - item.valor_titulo);
+                                const isItemProcessing = processingItems.has(itemId);
+                                const valorDiferenca = Math.abs(item.valor_recebido - item.valor_calculado);
                                 const isValorCompativel = valorDiferenca < 0.01;
 
                                 return (
@@ -209,55 +242,27 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
                                                 className="p-0 hover:bg-slate-100 rounded transition-colors"
                                             >
                                                 {isSelected ? (
-                                                    <CheckSquare className="h-5 w-5 text-blue-600" />
+                                                    <CheckSquare className="h-4 w-4 text-blue-600" />
                                                 ) : (
-                                                    <Square className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                                                    <Square className="h-4 w-4 text-slate-400 hover:text-slate-600" />
                                                 )}
                                             </button>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <button
-                                                onClick={() => baixaTitulo({
-                                                    id: item.id,
-                                                    data_recebimento: item.data_recebimento,
-                                                    categoria: 'Venda Shopee',
-                                                    historico: '',
-                                                    valorPago: item.valor_recebido,
-                                                    contaDestino: "",
-                                                    valorAcrescimo: 0,
-                                                    valorDesconto: 0,
-                                                    valorJuros: 0,
-                                                    valorTaxas: item.valor_taxas
-                                                })}
-                                                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md active:scale-95"
-                                            >
-                                                <Check className="h-4 w-4" />
-                                                Baixar
-                                            </button>
+                                        <td className="px-2 flex gap-2 items-center py-4 whitespace-nowrap">
+                                            <BaixaButton
+                                                processing={isItemProcessing}
+                                                onClick={() => baixaTitulo(item, idx)}
+                                                icon={Check}
+                                                iconSize={15}
+                                                textDefault="Baixar"
+                                                textProcessing="Baixando..."
+                                                className="bg-blue-700 text-sm"
+                                            />
+
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                                             {item.id_ecommerce}
-                                        </td>
-                                        <td className="px-6 truncate py-4 whitespace-nowrap text-sm text-slate-700">
-                                            {item.cliente || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                                            {formatCurrency(item.valor_titulo)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                                            {formatCurrency(item.valor_taxas)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                                            {formatCurrency(item.valor_calculado)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                                            {formatCurrency(item.valor_recebido)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                                            {formatDate(item.data_recebimento)}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                                            {item.documento || '-'}
+                                            <CopyButton text={item.id_ecommerce} />
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${isValorCompativel
@@ -274,6 +279,29 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
                                                 )}
                                             </span>
                                         </td>
+                                        <td className="px-6 truncate py-4 whitespace-nowrap text-sm text-slate-700">
+                                            {item.cliente || '-'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                                            {formatCurrency(item.valor_titulo)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                                            {formatCurrency(item.valor_taxas)}
+                                        </td>
+                                        <td className="px-6 py-4 flex gap-1 whitespace-nowrap text-sm font-medium text-slate-900">
+                                            {formatCurrency(item.valor_calculado)}
+                                            <TituloTaxas item={item} />
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                                            {formatCurrency(item.valor_recebido)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                                            {formatDate(item.data_recebimento)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                                            {item.documento?.split('/', 1) || '-'}
+                                        </td>
+
                                     </tr>
                                 );
                             })}
