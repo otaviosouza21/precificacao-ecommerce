@@ -228,7 +228,7 @@ export default function TituloLista({ recebidosConciliados, atualizar, setAtuali
                                 const isSelected = selectedItems.has(itemId);
                                 const isItemProcessing = processingItems.has(itemId);
                                 const valorDiferenca = Math.abs(item.valor_recebido - item.valor_calculado);
-                                const isValorCompativel = valorDiferenca < 0.01;
+                                const isValorCompativel = valorDiferenca === 0;
 
                                 return (
                                     <tr
