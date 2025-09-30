@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, Loader2, Upload, X, FileSpreadsheet } from "lucide-react";
+import { Loader2, Upload, X, FileSpreadsheet } from "lucide-react";
 import { Dispatch, SetStateAction, useState } from "react";
 import FiltraJsonShopee, { ObjetoPlanilhaFinal, PlanilhaXlsx } from './FiltraJsonShopee'
 import * as XLSX from "xlsx";
