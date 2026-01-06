@@ -48,7 +48,7 @@ export function CriaObjetoPlanilha(planilha: PlanilhaXlsx) {
       id_ecommerce: item[2],
       nome_anuncio: item[5],
       dt_conclusao: item[7],
-      valor_recebido: item[10],
+      valor_recebido: item[11],
       cupom_rebate: item[18],
     } as ObjetoPlanilhaFinal;
   });
