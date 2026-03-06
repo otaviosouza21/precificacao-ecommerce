@@ -6,7 +6,6 @@ import { Info } from "lucide-react";
 export default function TituloTaxas({ item }: { item: ConciliacaoItem }) {
   const [exibeTaxas, setExibeTaxas] = useState(false);
   const regra_comissao = (item.regra.perc_comissao_shopee * 100).toFixed(0) + "%";
-  const regra_taxa = item.regra.taxa_fixa_shopee;
 
   return (
     <div className="relative inline-flex items-center justify-center">
