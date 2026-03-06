@@ -42,7 +42,7 @@ export default function LimpaJsonShopee(planilhaData: PlanilhaXlsx) {
 }
 
 export function CriaObjetoPlanilha(planilha: PlanilhaXlsx) {
-  console.log(planilha)
+
   return planilha.map((item) => {
     return {
       id_ecommerce: item[2],
