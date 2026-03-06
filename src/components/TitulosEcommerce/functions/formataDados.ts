@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 enum REGRAS_COMISSAO {
   REGRA_1 = "REGRA_1",
   REGRA_2 = "REGRA_2",
