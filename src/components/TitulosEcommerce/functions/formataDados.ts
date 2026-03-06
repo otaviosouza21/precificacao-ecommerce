@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 enum REGRAS_COMISSAO {
   REGRA_1 = "REGRA_1",
   REGRA_2 = "REGRA_2",
@@ -15,7 +16,7 @@ export interface RegraComissao {
 // Tabela baseada na imagem fornecida
 const tabelaComissao: Record<REGRAS_COMISSAO, RegraComissao> = {
   [REGRAS_COMISSAO.REGRA_1]: {
-    perc_comissao_shopee: 0.20, // 20%
+    perc_comissao_shopee: 0.2, // 20%
     taxa_fixa_shopee: 4.0,
     subsidio_pix: 0, // não tem subsídio
   },
@@ -58,21 +59,28 @@ export const defineRegraComissao = (valor_titulo: number): REGRAS_COMISSAO => {
   }
 };
 
-export const calculaTaxas = (valor_titulo: number, usouPix: boolean = false) => {
-  const regra = tabelaComissao[defineRegraComissao(valor_titulo)];
+export const calculaTaxas = (valor_titulo: number, criacao_pedido: string) => {
+
+  // Extrai o mês da data de criação do pedido (0-11)
+  const dataCriacaoData = new Date(criacao_pedido).getMonth();
+
+  // Define a regra de comissão com base no valor do título e na data de criação do pedido
+  const regra = dataCriacaoData >= 2 ? tabelaComissao[defineRegraComissao(valor_titulo)] : tabelaComissao.REGRA_1;
+
+  const usouPix = 0;
 
   // Cálculo da comissão: percentual sobre o valor + taxa fixa
-  const comissaoTotal = valor_titulo * regra.perc_comissao_shopee + regra.taxa_fixa_shopee;
-  
+  const comissaoTotal =
+    valor_titulo * regra.perc_comissao_shopee + regra.taxa_fixa_shopee;
+
   // Se usou Pix, aplica o subsídio (reduz a comissão)
   const subsidio = usouPix ? valor_titulo * regra.subsidio_pix : 0;
-  
+
   // Taxa final é a comissão menos o subsídio
   const valorTaxa = comissaoTotal - subsidio;
-  
+
   // Valor que você recebe
   const valorCalculado = valor_titulo - valorTaxa;
-
 
   return {
     valorCalculado,
@@ -83,7 +91,7 @@ export const calculaTaxas = (valor_titulo: number, usouPix: boolean = false) => 
       comissaoPercentual: valor_titulo * regra.perc_comissao_shopee,
       taxaFixa: regra.taxa_fixa_shopee,
       subsidio: subsidio,
-    }
+    },
   };
 };
 export const formatCurrency = (value: number) => {

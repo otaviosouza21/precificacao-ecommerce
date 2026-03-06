@@ -11,6 +11,7 @@ import { calculaTaxas, RegraComissao } from "./functions/formataDados";
 export type ConciliacaoItem = {
   id_ecommerce: string;
   descricao_anuncio: string;
+  dt_criacao_pedido: string;
   valor_recebido: number;
   valor_titulo: number;
   valor_calculado: number;
@@ -84,13 +85,16 @@ export default function TitulosEcommerce() {
           conciliados.push({
             id_ecommerce: planilhaItem.id_ecommerce,
             descricao_anuncio: planilhaItem.nome_anuncio,
+            dt_criacao_pedido: planilhaItem.dt_criacao_pedido,
             valor_recebido: +planilhaItem.valor_recebido,
             valor_titulo: +tituloRelacionado.conta.valor,
             valor_calculado: +calculaTaxas(
               +tituloRelacionado.conta.valor,
+              planilhaItem.dt_criacao_pedido,
             ).valorCalculado.toFixed(2),
             valor_taxas: +calculaTaxas(
               +tituloRelacionado.conta.valor,
+              planilhaItem.dt_criacao_pedido,
             ).valorTaxa.toFixed(2),
             cupom_rebate: +planilhaItem.cupom_rebate,
             historico: tituloRelacionado.conta.historico,
@@ -98,7 +102,10 @@ export default function TitulosEcommerce() {
             data_recebimento: planilhaItem.dt_conclusao,
             documento: tituloRelacionado.conta.numero_doc,
             id: tituloRelacionado.conta.id,
-            regra: calculaTaxas(+tituloRelacionado.conta.valor).regra,
+            regra: calculaTaxas(
+              +tituloRelacionado.conta.valor,
+              planilhaItem.dt_criacao_pedido,
+            ).regra,
           });
 
           // Marca como processado
@@ -127,7 +134,7 @@ export default function TitulosEcommerce() {
   return (
     <div className="p-4 ">
       <h1 className="text-2xl text-white font-bold mb-6">
-        Conciliação de Títulos E-commerce
+        Conciliação de Títulos E-commerce | Shopee
       </h1>
 
       <ReadXlsx setDataPlanilha={setDataPlanilha} />
