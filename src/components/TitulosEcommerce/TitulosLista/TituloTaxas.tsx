@@ -5,7 +5,8 @@ import { Info } from "lucide-react";
 
 export default function TituloTaxas({ item }: { item: ConciliacaoItem }) {
   const [exibeTaxas, setExibeTaxas] = useState(false);
-  const regra_comissao = (item.regra.perc_comissao_shopee * 100).toFixed(0) + "%";
+  const regra_comissao =
+    (item.regra.perc_comissao_shopee * 100).toFixed(0) + "%";
 
   return (
     <div className="relative inline-flex items-center justify-center">
@@ -42,6 +43,13 @@ export default function TituloTaxas({ item }: { item: ConciliacaoItem }) {
               <span className="text-gray-600">Taxa</span>
               <span className="font-semibold text-red-600">
                 - {brlConvert(item.regra.taxa_fixa_shopee)}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-600">Taxa Afiliados</span>
+              <span className="font-semibold text-red-600">
+                {brlConvert(item.taxa_afiliados)}
               </span>
             </div>
 

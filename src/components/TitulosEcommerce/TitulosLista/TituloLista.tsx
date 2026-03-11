@@ -254,10 +254,11 @@ export default function TituloLista({
                 return (
                   <tr
                     key={itemId}
-                    className={`transition-all duration-200 hover:bg-blue-100 ${isSelected
-                      ? "bg-blue-200 ring-2 ring-blue-200 ring-inset"
-                      : ""
-                      }`}
+                    className={`transition-all duration-200 hover:bg-blue-100 ${
+                      isSelected
+                        ? "bg-blue-200 ring-2 ring-blue-200 ring-inset"
+                        : ""
+                    }`}
                   >
                     <td className="px-4 py-4 whitespace-nowrap">
                       <button
@@ -291,10 +292,11 @@ export default function TituloLista({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${isValorCompativel
-                          ? "bg-green-100 text-green-800 ring-1 ring-green-600/20"
-                          : "bg-amber-100 text-amber-800 ring-1 ring-amber-600/20"
-                          }`}
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+                          isValorCompativel
+                            ? "bg-green-100 text-green-800 ring-1 ring-green-600/20"
+                            : "bg-amber-100 text-amber-800 ring-1 ring-amber-600/20"
+                        }`}
                       >
                         {isValorCompativel ? (
                           <>

@@ -23,6 +23,7 @@ export type ConciliacaoItem = {
   documento?: string;
   id: string;
   regra: RegraComissao;
+  taxa_afiliados: number;
 };
 
 export default function TitulosEcommerce() {
@@ -88,24 +89,23 @@ export default function TitulosEcommerce() {
             dt_criacao_pedido: planilhaItem.dt_criacao_pedido,
             valor_recebido: +planilhaItem.valor_recebido,
             valor_titulo: +tituloRelacionado.conta.valor,
-            valor_calculado: +calculaTaxas(
-              +tituloRelacionado.conta.valor,
-              planilhaItem.dt_criacao_pedido,
-            ).valorCalculado.toFixed(2),
-            valor_taxas: +calculaTaxas(
-              +tituloRelacionado.conta.valor,
-              planilhaItem.dt_criacao_pedido,
-            ).valorTaxa.toFixed(2),
+            valor_calculado: +calculaTaxas({
+              planilha: planilhaItem,
+              tituloRelacionado,
+            }).valorCalculado.toFixed(2),
+            valor_taxas: +calculaTaxas({
+              planilha: planilhaItem,
+              tituloRelacionado,
+            }).valorTaxa.toFixed(2),
             cupom_rebate: +planilhaItem.cupom_rebate,
             historico: tituloRelacionado.conta.historico,
             cliente: tituloRelacionado.conta.nome_cliente,
             data_recebimento: planilhaItem.dt_conclusao,
             documento: tituloRelacionado.conta.numero_doc,
             id: tituloRelacionado.conta.id,
-            regra: calculaTaxas(
-              +tituloRelacionado.conta.valor,
-              planilhaItem.dt_criacao_pedido,
-            ).regra,
+            regra: calculaTaxas({ planilha: planilhaItem, tituloRelacionado })
+              .regra,
+            taxa_afiliados: +planilhaItem.taxa_afiliados,
           });
 
           // Marca como processado
