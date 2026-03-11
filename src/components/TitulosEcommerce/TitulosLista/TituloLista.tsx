@@ -209,9 +209,7 @@ export default function TituloLista({
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Cliente
-                </th>
+
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   <div className="flex flex-col">
                     <span>Título</span>
@@ -256,11 +254,10 @@ export default function TituloLista({
                 return (
                   <tr
                     key={itemId}
-                    className={`transition-all duration-200 hover:bg-slate-50 ${
-                      isSelected
-                        ? "bg-blue-50 ring-2 ring-blue-200 ring-inset"
-                        : ""
-                    }`}
+                    className={`transition-all duration-200 hover:bg-blue-100 ${isSelected
+                      ? "bg-blue-200 ring-2 ring-blue-200 ring-inset"
+                      : ""
+                      }`}
                   >
                     <td className="px-4 py-4 whitespace-nowrap">
                       <button
@@ -294,11 +291,10 @@ export default function TituloLista({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
-                          isValorCompativel
-                            ? "bg-green-100 text-green-800 ring-1 ring-green-600/20"
-                            : "bg-amber-100 text-amber-800 ring-1 ring-amber-600/20"
-                        }`}
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${isValorCompativel
+                          ? "bg-green-100 text-green-800 ring-1 ring-green-600/20"
+                          : "bg-amber-100 text-amber-800 ring-1 ring-amber-600/20"
+                          }`}
                       >
                         {isValorCompativel ? (
                           <>
@@ -310,9 +306,7 @@ export default function TituloLista({
                         )}
                       </span>
                     </td>
-                    <td className="px-6 truncate py-4 whitespace-nowrap text-sm text-slate-700">
-                      {item.cliente || "-"}
-                    </td>
+
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                       {formatCurrency(item.valor_titulo)}
                     </td>
