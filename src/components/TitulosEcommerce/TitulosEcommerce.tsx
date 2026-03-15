@@ -24,6 +24,7 @@ export type ConciliacaoItem = {
   id: string;
   regra: RegraComissao;
   taxa_afiliados: number;
+  houveArredondamento: boolean;
 };
 
 export default function TitulosEcommerce() {
@@ -106,6 +107,10 @@ export default function TitulosEcommerce() {
             regra: calculaTaxas({ planilha: planilhaItem, tituloRelacionado })
               .regra,
             taxa_afiliados: +planilhaItem.taxa_afiliados,
+            houveArredondamento: calculaTaxas({
+              planilha: planilhaItem,
+              tituloRelacionado,
+            }).houveArredondamento,
           });
 
           // Marca como processado

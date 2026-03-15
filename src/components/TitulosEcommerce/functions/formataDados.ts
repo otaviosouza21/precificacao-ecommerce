@@ -94,16 +94,20 @@ export const calculaTaxas = ({
     2,
   );
 
+  let houveArredondamento = false;
+
   // Se a diferença for -0.01, ajusta o valor calculado e a taxa
   if (+diferencaRecebidoCalculado === -0.01) {
     valorCalculado -= 0.01;
     valorTaxa += 0.01;
+    houveArredondamento = true;
   }
 
   return {
     valorCalculado,
     valorTaxa,
     regra,
+    houveArredondamento,
     detalhamento: {
       valorOriginal: +conta.valor,
       comissaoPercentual: +conta.valor * regra.perc_comissao_shopee,

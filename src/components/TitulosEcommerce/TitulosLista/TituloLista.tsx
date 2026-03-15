@@ -1,4 +1,4 @@
-import { Check, CheckSquare, Square, Plus } from "lucide-react";
+import { Check, CheckSquare, Square, Plus, AlertCircle } from "lucide-react";
 import { ConciliacaoItem } from "../TitulosEcommerce";
 import { baixarTituloTiny } from "@/actions/baixaTituloTiny";
 import { toast } from "react-toastify";
@@ -307,6 +307,22 @@ export default function TituloLista({
                           "Divergente"
                         )}
                       </span>
+                      {(Number(item.taxa_afiliados) !== 0 ||
+                        item.houveArredondamento) && (
+                        <div
+                          className="ml-2 text-red-500 cursor-help"
+                          title={
+                            Number(item.taxa_afiliados) !== 0 &&
+                            item.houveArredondamento
+                              ? "Possui taxa de afiliados e arredondamento de 0,01"
+                              : Number(item.taxa_afiliados) !== 0
+                                ? "Possui taxa de afiliados"
+                                : "Possui arredondamento de 0,01"
+                          }
+                        >
+                          <AlertCircle className="h-4 w-4" />
+                        </div>
+                      )}
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">

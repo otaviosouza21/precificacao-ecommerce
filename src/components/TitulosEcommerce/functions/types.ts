@@ -11,6 +11,7 @@ export interface CalculaTaxasReturn {
   valorCalculado: number;
   valorTaxa: number;
   regra: RegraComissao;
+  houveArredondamento: boolean;
   detalhamento: {
     valorOriginal: number;
     comissaoPercentual: number;
