@@ -25,6 +25,7 @@ export type ConciliacaoItem = {
   regra: RegraComissao;
   taxa_afiliados: number;
   houveArredondamento: boolean;
+  subisidio_pix: number;
 };
 
 export default function TitulosEcommerce() {
@@ -90,6 +91,7 @@ export default function TitulosEcommerce() {
             dt_criacao_pedido: planilhaItem.dt_criacao_pedido,
             valor_recebido: +planilhaItem.valor_recebido,
             valor_titulo: +tituloRelacionado.conta.valor,
+            subisidio_pix: +planilhaItem.subisidio_pix,
             valor_calculado: +calculaTaxas({
               planilha: planilhaItem,
               tituloRelacionado,

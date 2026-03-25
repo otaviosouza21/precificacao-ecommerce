@@ -6,6 +6,7 @@ export interface ObjetoPlanilhaFinal {
   valor_recebido: string;
   cupom_rebate: number;
   taxa_afiliados: number;
+  subisidio_pix: number;
 }
 
 export type PlanilhaXlsx = [
@@ -38,6 +39,20 @@ export type PlanilhaXlsx = [
   string,
   string,
   number,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  number,
 ][];
 
 export default function LimpaJsonShopee(planilhaData: PlanilhaXlsx) {
@@ -54,7 +69,6 @@ export default function LimpaJsonShopee(planilhaData: PlanilhaXlsx) {
 
 export function CriaObjetoPlanilha(planilha: PlanilhaXlsx) {
   return planilha.map((item) => {
-    console.log(item);
     return {
       id_ecommerce: item[2],
       nome_anuncio: item[5],
@@ -63,6 +77,7 @@ export function CriaObjetoPlanilha(planilha: PlanilhaXlsx) {
       valor_recebido: item[11],
       cupom_rebate: item[18],
       taxa_afiliados: item[28],
+      subisidio_pix: item[42],
     } as ObjetoPlanilhaFinal;
   });
 }

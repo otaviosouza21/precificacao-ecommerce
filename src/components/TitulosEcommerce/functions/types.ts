@@ -14,7 +14,9 @@ export interface CalculaTaxasReturn {
   houveArredondamento: boolean;
   detalhamento: {
     valorOriginal: number;
-    comissaoPercentual: number;
+    valorBase: number;
+    comissaoBruta: number;
+    comissaoLiquida: number;
     taxaFixa: number;
     subsidio: number;
   };

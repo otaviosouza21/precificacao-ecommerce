@@ -30,11 +30,19 @@ export default function TituloTaxas({ item }: { item: ConciliacaoItem }) {
             </div>
 
             <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-600">Subsídio Pix:</span>
+              <span className="font-semibold text-green-600">
+                + {brlConvert(item.subisidio_pix)}
+              </span>
+            </div>
+
+            <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Comissão: {regra_comissao}</span>
               <span className="font-semibold text-red-600">
                 -{" "}
                 {brlConvert(
-                  item.regra.perc_comissao_shopee * item.valor_titulo,
+                  item.regra.perc_comissao_shopee *
+                    (item.valor_titulo + item.subisidio_pix),
                 )}
               </span>
             </div>

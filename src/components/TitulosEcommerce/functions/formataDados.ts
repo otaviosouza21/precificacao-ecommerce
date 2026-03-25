@@ -66,28 +66,30 @@ export const calculaTaxas = ({
 }: CalculaTaxasProps): CalculaTaxasReturn => {
   const { dt_criacao_pedido, valor_recebido, taxa_afiliados } = planilhaItem;
   const { conta } = tituloRelacionado;
-  // Extrai o mês da data de criação do pedido (0-11)
+
   const dataCriacaoData = new Date(dt_criacao_pedido).getMonth();
 
-  // Define a regra de comissão com base no valor do título e na data de criação do pedido
   const regra =
     dataCriacaoData >= 2
       ? tabelaComissao[defineRegraComissao(+conta.valor)]
       : tabelaComissao.REGRA_1;
 
-  const usouPix = 0;
+  // PASSO 1: Calcular base de cálculo (valor - subsídio PIX)
+  const subsidio = Math.abs(+planilhaItem.subisidio_pix);
+  const valorBase = +conta.valor + subsidio;
 
-  // Cálculo da comissão: percentual sobre o valor + taxa fixa
-  const comissaoTotal =
-    +conta.valor * regra.perc_comissao_shopee + regra.taxa_fixa_shopee;
+  // PASSO 2: Calcular taxas brutas sobre a base
+  const comissaoBruta =
+    valorBase * regra.perc_comissao_shopee + regra.taxa_fixa_shopee;
 
-  // Se usou Pix, aplica o subsídio (reduz a comissão)
-  const subsidio = usouPix ? +conta.valor * regra.subsidio_pix : 0;
+  // PASSO 3: Aplicar o subsídio PIX novamente como desconto nas taxas
+  // (taxa líquida = taxa bruta - subsídio)
+  const comissaoLiquida = comissaoBruta - subsidio;
 
-  // Taxa final é a comissão menos o subsídio
-  let valorTaxa = comissaoTotal - subsidio - taxa_afiliados;
+  // PASSO 4: Subtrair afiliados
+  let valorTaxa = comissaoLiquida - taxa_afiliados;
 
-  // Valor que você recebe
+  // PASSO 5: Calcular valor líquido
   let valorCalculado = +conta.valor - valorTaxa;
 
   const diferencaRecebidoCalculado = (+valor_recebido - valorCalculado).toFixed(
@@ -96,7 +98,6 @@ export const calculaTaxas = ({
 
   let houveArredondamento = false;
 
-  // Se a diferença for -0.01, ajusta o valor calculado e a taxa
   if (+diferencaRecebidoCalculado === -0.01) {
     valorCalculado -= 0.01;
     valorTaxa += 0.01;
@@ -110,12 +111,15 @@ export const calculaTaxas = ({
     houveArredondamento,
     detalhamento: {
       valorOriginal: +conta.valor,
-      comissaoPercentual: +conta.valor * regra.perc_comissao_shopee,
+      valorBase: valorBase,
+      comissaoBruta: comissaoBruta,
+      comissaoLiquida: comissaoLiquida,
       taxaFixa: regra.taxa_fixa_shopee,
       subsidio: subsidio,
     },
   };
 };
+
 export const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
