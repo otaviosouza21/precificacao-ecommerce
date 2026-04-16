@@ -10,6 +10,7 @@ import {
   User,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 export default function MainHeader() {
@@ -76,7 +77,16 @@ export default function MainHeader() {
               <ShoppingCart size={20} /> {!collapsed && "Ecommerce"}
             </li>
             <li className="flex items-center gap-3 hover:text-blue-100 cursor-pointer">
-              <Activity size={20} /> {!collapsed && "Custos"}
+              <Activity size={20} />
+              {!collapsed && (
+                <Link
+                  href="/produtos/relatorios/custos"
+                  className="w-full"
+                  onClick={() => setCollapsed(true)}
+                >
+                  Custos
+                </Link>
+              )}
             </li>
           </ul>
         </div>
