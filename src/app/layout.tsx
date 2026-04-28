@@ -24,9 +24,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={`${poppins.variable}  antialiased flex `}>
+      <body className={`${poppins.variable} antialiased flex`}>
         <MainHeader />
-        <div className="ml-15 w-full">{children}</div>
+        <main className="ml-15 flex-1 min-h-screen">{children}</main>
         <ToastContainer />
       </body>
     </html>
