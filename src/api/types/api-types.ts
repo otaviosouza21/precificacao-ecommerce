@@ -45,6 +45,62 @@ export type TitulosReceberApiTiny = {
   };
 };
 
+export type PedidoResumoTiny = {
+  pedido: {
+    id: string;
+    numero: string;
+    numero_ecommerce?: string;
+    data_pedido: string;
+    data_prevista?: string;
+    nome?: string;
+    valor: string;
+    id_vendedor?: string;
+    nome_vendedor?: string;
+    situacao: string;
+    codigo_rastreamento?: string;
+  };
+};
+
+export type PedidosListApi = {
+  retorno: {
+    status: string;
+    status_processamento?: string;
+    codigo_erro?: string;
+    erros?: { erro: string }[];
+    pagina?: number;
+    numero_paginas?: number;
+    pedidos?: PedidoResumoTiny[];
+  };
+};
+
+export type ItemPedidoTiny = {
+  item: {
+    id_produto?: string;
+    codigo?: string;
+    descricao: string;
+    unidade: string;
+    quantidade: string;
+    valor_unitario: string;
+    info_adicional?: string;
+  };
+};
+
+export type PedidoCompletoApi = {
+  retorno: {
+    status: string;
+    status_processamento?: string;
+    codigo_erro?: string;
+    erros?: { erro: string }[];
+    pedido?: {
+      id: string;
+      numero: string;
+      data_pedido: string;
+      situacao: string;
+      itens?: ItemPedidoTiny[];
+    };
+  };
+};
+
 export type ProdutoTiny = {
   id: string;
   nome: string;

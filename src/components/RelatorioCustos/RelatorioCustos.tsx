@@ -1,16 +1,21 @@
 "use client";
 
+import { getSaidasPeriodoTiny } from "@/actions/getSaidasPeriodoTiny";
 import {
+  AlertCircle,
   BarChart3,
   ChevronDown,
   ChevronUp,
   DollarSign,
   Hash,
+  Loader2,
   Package,
+  RefreshCw,
   ShoppingBag,
+  TrendingDown,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import LerPlanilhaCustos from "./LerPlanilhaCustos";
 import {
   agrupaPorProduto,
@@ -22,12 +27,26 @@ import {
   ProdutoAgrupado,
 } from "./processaCustos";
 
+type SaidasPeriodoState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | {
+      status: "ok";
+      porSku: Record<string, { total: number; numPedidos: number }>;
+      totalPedidos: number;
+      cacheado: boolean;
+    }
+  | { status: "erro"; mensagem: string; rateLimited?: boolean };
+
 export default function RelatorioCustos() {
   const [entradas, setEntradas] = useState<EntradaCusto[] | null>(null);
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [busca, setBusca] = useState("");
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
+  const [saidasPeriodo, setSaidasPeriodo] = useState<SaidasPeriodoState>({
+    status: "idle",
+  });
 
   const entradasFiltradas = useMemo(() => {
     if (!entradas) return [];
@@ -53,6 +72,45 @@ export default function RelatorioCustos() {
     () => calculaResumo(entradasFiltradas, agrupados),
     [entradasFiltradas, agrupados]
   );
+
+  // Período efetivo usado nas chamadas à API: filtro do usuário ou período da planilha
+  const periodoInicioEfetivo = dataInicio || resumo.periodoInicio;
+  const periodoFimEfetivo = dataFim || resumo.periodoFim;
+
+  // Invalida saídas quando o período efetivo muda
+  useEffect(() => {
+    setSaidasPeriodo({ status: "idle" });
+  }, [periodoInicioEfetivo, periodoFimEfetivo]);
+
+  const carregarSaidas = async (forcar = false) => {
+    if (!periodoInicioEfetivo || !periodoFimEfetivo) {
+      setSaidasPeriodo({
+        status: "erro",
+        mensagem: "Período não definido",
+      });
+      return;
+    }
+    setSaidasPeriodo({ status: "loading" });
+    const resultado = await getSaidasPeriodoTiny({
+      dataInicio: periodoInicioEfetivo,
+      dataFim: periodoFimEfetivo,
+      forcar,
+    });
+    if (resultado.ok) {
+      setSaidasPeriodo({
+        status: "ok",
+        porSku: resultado.porSku,
+        totalPedidos: resultado.totalPedidos,
+        cacheado: resultado.cacheado,
+      });
+    } else {
+      setSaidasPeriodo({
+        status: "erro",
+        mensagem: resultado.erro,
+        rateLimited: resultado.rateLimited,
+      });
+    }
+  };
 
   const toggleExpand = (sku: string) => {
     setExpandidos((prev) => {
@@ -183,6 +241,15 @@ export default function RelatorioCustos() {
             </div>
           </div>
 
+          {/* Painel saídas do período */}
+          <PainelSaidasPeriodo
+            state={saidasPeriodo}
+            onCarregar={() => carregarSaidas(false)}
+            onRecarregar={() => carregarSaidas(true)}
+            periodoInicio={periodoInicioEfetivo}
+            periodoFim={periodoFimEfetivo}
+          />
+
           {/* Tabela de produtos */}
           {produtosFiltrados.length === 0 ? (
             <div className="text-center py-12 text-sky-400 text-sm">
@@ -191,29 +258,39 @@ export default function RelatorioCustos() {
           ) : (
             <div className="rounded-xl overflow-hidden border border-white/10">
               {/* Cabeçalho */}
-              <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_40px] bg-sky-900/80 text-sky-200 text-xs font-semibold uppercase px-4 py-3 gap-2">
+              <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1.2fr_40px] bg-sky-900/80 text-sky-200 text-xs font-semibold uppercase px-4 py-3 gap-2">
                 <span>Produto / SKU</span>
                 <span className="text-right">Qtd. Total</span>
                 <span className="text-right">Último Preço</span>
                 <span className="text-right">Custo Médio</span>
                 <span className="text-right">Total Comprado</span>
+                <span className="text-right">Saídas no Período</span>
                 <span />
               </div>
 
               {/* Linhas */}
               <div className="divide-y divide-white/5">
-                {produtosFiltrados.map((produto) => (
-                  <ProdutoLinha
-                    key={produto.sku}
-                    produto={produto}
-                    expandido={expandidos.has(produto.sku)}
-                    onToggle={() => toggleExpand(produto.sku)}
-                  />
-                ))}
+                {produtosFiltrados.map((produto) => {
+                  const chave = produto.sku.trim().toLowerCase();
+                  const saidaSku =
+                    saidasPeriodo.status === "ok"
+                      ? saidasPeriodo.porSku[chave] ?? null
+                      : null;
+                  return (
+                    <ProdutoLinha
+                      key={produto.sku}
+                      produto={produto}
+                      expandido={expandidos.has(produto.sku)}
+                      onToggle={() => toggleExpand(produto.sku)}
+                      saidaSku={saidaSku}
+                      saidasCarregadas={saidasPeriodo.status === "ok"}
+                    />
+                  );
+                })}
               </div>
 
               {/* Rodapé totais */}
-              <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_40px] bg-sky-900/60 text-white text-xs font-bold px-4 py-3 gap-2 border-t border-sky-700/50">
+              <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1.2fr_40px] bg-sky-900/60 text-white text-xs font-bold px-4 py-3 gap-2 border-t border-sky-700/50">
                 <span className="text-sky-200">
                   {produtosFiltrados.length} produto
                   {produtosFiltrados.length !== 1 ? "s" : ""}
@@ -229,6 +306,17 @@ export default function RelatorioCustos() {
                   {formataMoeda(
                     produtosFiltrados.reduce((s, p) => s + p.valorTotalGeral, 0)
                   )}
+                </span>
+                <span className="text-right text-rose-300">
+                  {saidasPeriodo.status === "ok"
+                    ? produtosFiltrados
+                        .reduce((s, p) => {
+                          const info =
+                            saidasPeriodo.porSku[p.sku.trim().toLowerCase()];
+                          return info ? s + info.total : s;
+                        }, 0)
+                        .toLocaleString("pt-BR")
+                    : "—"}
                 </span>
                 <span />
               </div>
@@ -270,10 +358,14 @@ function ProdutoLinha({
   produto,
   expandido,
   onToggle,
+  saidaSku,
+  saidasCarregadas,
 }: {
   produto: ProdutoAgrupado;
   expandido: boolean;
   onToggle: () => void;
+  saidaSku: { total: number; numPedidos: number } | null;
+  saidasCarregadas: boolean;
 }) {
   const nEntradas = produto.entradas.length;
   const variacaoPreco =
@@ -286,7 +378,7 @@ function ProdutoLinha({
     <>
       {/* Linha principal */}
       <div
-        className={`grid grid-cols-[2fr_1fr_1fr_1fr_1fr_40px] px-4 py-3 gap-2 items-center transition-colors cursor-pointer text-sm ${
+        className={`grid grid-cols-[2fr_1fr_1fr_1fr_1fr_1.2fr_40px] px-4 py-3 gap-2 items-center transition-colors cursor-pointer text-sm ${
           expandido
             ? "bg-sky-800/30"
             : "bg-transparent hover:bg-white/5"
@@ -321,6 +413,23 @@ function ProdutoLinha({
         <span className="text-right text-amber-200 font-medium">
           {formataMoeda(produto.valorTotalGeral)}
         </span>
+        <div className="flex justify-end items-center text-sm">
+          {!saidasCarregadas ? (
+            <span className="text-sky-600 text-xs">—</span>
+          ) : saidaSku ? (
+            <span className="flex items-center gap-2">
+              <span className="font-semibold text-rose-300">
+                <TrendingDown className="w-3.5 h-3.5 inline mr-1" />
+                {saidaSku.total.toLocaleString("pt-BR")}
+              </span>
+              <span className="text-[10px] text-sky-500">
+                {saidaSku.numPedidos} ped.
+              </span>
+            </span>
+          ) : (
+            <span className="text-sky-600 text-xs">0</span>
+          )}
+        </div>
         <div className="flex justify-center text-sky-400">
           {expandido ? (
             <ChevronUp className="w-4 h-4" />
@@ -334,12 +443,13 @@ function ProdutoLinha({
       {expandido && (
         <div className="bg-sky-950/60 border-t border-white/5">
           {/* Header entradas */}
-          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_40px] px-8 py-2 gap-2 text-xs text-sky-400 font-semibold uppercase bg-sky-950/40">
+          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1.2fr_40px] px-8 py-2 gap-2 text-xs text-sky-400 font-semibold uppercase bg-sky-950/40">
             <span>N° NF</span>
             <span>Data</span>
             <span className="text-right">Quantidade</span>
             <span className="text-right">Preço Unit.</span>
             <span className="text-right">Valor Total</span>
+            <span />
             <span />
           </div>
           {produto.entradas
@@ -348,7 +458,7 @@ function ProdutoLinha({
             .map((entrada, i) => (
               <div
                 key={i}
-                className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_40px] px-8 py-2 gap-2 text-xs text-sky-200 border-t border-white/5 hover:bg-white/5"
+                className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1.2fr_40px] px-8 py-2 gap-2 text-xs text-sky-200 border-t border-white/5 hover:bg-white/5"
               >
                 <span className="font-mono text-sky-400">{entrada.nf}</span>
                 <span>{entrada.data}</span>
@@ -362,10 +472,11 @@ function ProdutoLinha({
                   {formataMoeda(entrada.valorTotal)}
                 </span>
                 <span />
+                <span />
               </div>
             ))}
           {/* Subtotal do produto */}
-          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_40px] px-8 py-2 gap-2 text-xs font-bold text-white bg-sky-900/40 border-t border-sky-700/30">
+          <div className="grid grid-cols-[1fr_1fr_1fr_1fr_1fr_1.2fr_40px] px-8 py-2 gap-2 text-xs font-bold text-white bg-sky-900/40 border-t border-sky-700/30">
             <span className="text-sky-300">Subtotal</span>
             <span />
             <span className="text-right">
@@ -379,9 +490,98 @@ function ProdutoLinha({
               {formataMoeda(produto.valorTotalGeral)}
             </span>
             <span />
+            <span />
           </div>
         </div>
       )}
     </>
+  );
+}
+
+function PainelSaidasPeriodo({
+  state,
+  onCarregar,
+  onRecarregar,
+  periodoInicio,
+  periodoFim,
+}: {
+  state: SaidasPeriodoState;
+  onCarregar: () => void;
+  onRecarregar: () => void;
+  periodoInicio: string;
+  periodoFim: string;
+}) {
+  const periodoDefinido = Boolean(periodoInicio && periodoFim);
+
+  return (
+    <div className="bg-gradient-to-br from-rose-900/30 to-rose-800/20 border border-rose-700/30 rounded-xl p-4 mb-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <TrendingDown className="w-5 h-5 text-rose-300" />
+          <div>
+            <p className="text-white text-sm font-semibold">
+              Saídas do período (vendas no Tiny)
+            </p>
+            <p className="text-rose-200/80 text-xs mt-0.5">
+              {state.status === "ok"
+                ? `${state.totalPedidos} pedido${
+                    state.totalPedidos !== 1 ? "s" : ""
+                  } atendido${state.totalPedidos !== 1 ? "s" : ""}${
+                    state.cacheado ? " · cache" : ""
+                  }`
+                : state.status === "loading"
+                ? "Buscando pedidos no Tiny… isso pode levar alguns minutos"
+                : state.status === "erro"
+                ? state.mensagem
+                : "Clique para consultar a quantidade vendida de cada SKU no período."}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {state.status === "loading" && (
+            <span className="flex items-center gap-1.5 text-xs text-sky-200">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Carregando…
+            </span>
+          )}
+
+          {state.status === "erro" && (
+            <span
+              className="flex items-center gap-1.5 text-xs text-red-300"
+              title={state.mensagem}
+            >
+              <AlertCircle className="w-4 h-4" />
+              {state.rateLimited ? "Limite da API atingido" : "Erro"}
+            </span>
+          )}
+
+          {state.status === "ok" ? (
+            <button
+              onClick={onRecarregar}
+              className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-sky-800/50 hover:bg-sky-700/60 text-sky-100 border border-sky-600/40 transition-colors"
+              title="Forçar reconsulta no Tiny"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Recarregar
+            </button>
+          ) : (
+            <button
+              onClick={onCarregar}
+              disabled={!periodoDefinido || state.status === "loading"}
+              className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-rose-700/70 hover:bg-rose-600/80 text-white border border-rose-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              title={
+                periodoDefinido
+                  ? "Buscar saídas no Tiny"
+                  : "Defina um período antes"
+              }
+            >
+              <TrendingDown className="w-4 h-4" />
+              Carregar saídas do período
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
