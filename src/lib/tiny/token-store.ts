@@ -87,15 +87,13 @@ function resolverCredenciaisKv(): { url: string; token: string } | null {
   const url =
     process.env.KV_REST_API_URL ||
     process.env.UPSTASH_REDIS_REST_URL ||
-    Object.entries(process.env).find(([k]) =>
-      /_KV_REST_API_URL$/i.test(k)
-    )?.[1];
+    process.env.BIKELINE_KV_REST_API_URL ||
+    process.env.STORAGE_KV_REST_API_URL;
   const token =
     process.env.KV_REST_API_TOKEN ||
     process.env.UPSTASH_REDIS_REST_TOKEN ||
-    Object.entries(process.env).find(([k]) =>
-      /_KV_REST_API_TOKEN$/i.test(k)
-    )?.[1];
+    process.env.BIKELINE_KV_REST_API_TOKEN ||
+    process.env.STORAGE_KV_REST_API_TOKEN;
   if (!url || !token) return null;
   return { url, token };
 }
