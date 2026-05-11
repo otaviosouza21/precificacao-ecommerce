@@ -47,9 +47,18 @@ class KvTokenStore implements TokenStore {
     this.token = token;
     this.chave = chave;
   }
-  private async req(comando: string[]): Promise<unknown> {
-    const res = await fetch(`${this.url}/${comando.map(encodeURIComponent).join("/")}`, {
-      headers: { Authorization: `Bearer ${this.token}` },
+  private async req(
+    pathParts: string[],
+    body?: unknown
+  ): Promise<unknown> {
+    const path = pathParts.map(encodeURIComponent).join("/");
+    const res = await fetch(`${this.url}/${path}`, {
+      method: body !== undefined ? "POST" : "GET",
+      headers: {
+        Authorization: `Bearer ${this.token}`,
+        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
       cache: "no-store",
     });
     if (!res.ok) throw new Error(`KV ${res.status}: ${await res.text()}`);
@@ -65,7 +74,7 @@ class KvTokenStore implements TokenStore {
     }
   }
   async salvar(t: TinyTokens): Promise<void> {
-    await this.req(["set", this.chave, JSON.stringify(t)]);
+    await this.req(["set", this.chave], JSON.stringify(t));
   }
   async apagar(): Promise<void> {
     await this.req(["del", this.chave]);
@@ -73,6 +82,23 @@ class KvTokenStore implements TokenStore {
 }
 
 let storeSingleton: TokenStore | null = null;
+
+function resolverCredenciaisKv(): { url: string; token: string } | null {
+  const url =
+    process.env.KV_REST_API_URL ||
+    process.env.UPSTASH_REDIS_REST_URL ||
+    Object.entries(process.env).find(([k]) =>
+      /_KV_REST_API_URL$/i.test(k)
+    )?.[1];
+  const token =
+    process.env.KV_REST_API_TOKEN ||
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    Object.entries(process.env).find(([k]) =>
+      /_KV_REST_API_TOKEN$/i.test(k)
+    )?.[1];
+  if (!url || !token) return null;
+  return { url, token };
+}
 
 export function getTokenStore(): TokenStore {
   if (storeSingleton) return storeSingleton;
@@ -82,14 +108,13 @@ export function getTokenStore(): TokenStore {
     storeSingleton = new FileTokenStore(arquivo);
     return storeSingleton;
   }
-  const url = process.env.KV_REST_API_URL;
-  const token = process.env.KV_REST_API_TOKEN;
-  if (!url || !token) {
+  const cred = resolverCredenciaisKv();
+  if (!cred) {
     const arquivo = process.env.TINY_TOKENS_FILE || "./.tiny-tokens.json";
     storeSingleton = new FileTokenStore(arquivo);
     return storeSingleton;
   }
-  storeSingleton = new KvTokenStore(url, token);
+  storeSingleton = new KvTokenStore(cred.url, cred.token);
   return storeSingleton;
 }
 
