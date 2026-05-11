@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:tiny.com.br)",
+      "WebFetch(domain:api-docs.erp.olist.com)"
+    ]
+  }
+}
