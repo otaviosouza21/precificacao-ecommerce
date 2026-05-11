@@ -33,6 +33,10 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# tokens do Tiny OAuth (storage local em modo file)
+.tiny-tokens.json
+.tiny-tokens.json.tmp
+
 # vercel
 .vercel
 
