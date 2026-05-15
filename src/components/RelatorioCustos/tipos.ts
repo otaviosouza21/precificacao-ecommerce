@@ -8,6 +8,18 @@ export type NotaEntradaItem = {
   valorTotal: number;
 };
 
+export type ItemVendaSku = {
+  idPedido: string;
+  numero: string;
+  dataISO: string;
+  data: string;
+  quantidade: number;
+  valorUnitario: number;
+  valorTotal: number;
+};
+
+export type OrigemCusto = "periodo" | "historico" | "indisponivel";
+
 export type ProdutoRelatorio = {
   sku: string;
   produto: string;
@@ -20,6 +32,13 @@ export type ProdutoRelatorio = {
   saidasNoPeriodo: number;
   numPedidosVenda: number;
   notas: NotaEntradaItem[];
+  custoUnitario?: number;
+  origemCusto?: OrigemCusto;
+  receita?: number;
+  cmv?: number;
+  margemReais?: number;
+  margemPercent?: number;
+  pedidos?: ItemVendaSku[];
 };
 
 export function formataMoeda(v: number): string {

@@ -82,7 +82,7 @@ export async function sincronizarRelatorioCustos(input: {
   }
 
   try {
-    setProgresso(input.sessionKey, {
+    await setProgresso(input.sessionKey, {
       etapa: "Iniciando sincronização",
       atual: 0,
       total: 0,
@@ -109,7 +109,7 @@ export async function sincronizarRelatorioCustos(input: {
     >();
 
     let processados = 0;
-    setProgresso(input.sessionKey, {
+    await setProgresso(input.sessionKey, {
       etapa: "Buscando custos por produto",
       atual: 0,
       total: skusComEntrada.length,
@@ -166,7 +166,7 @@ export async function sincronizarRelatorioCustos(input: {
         }
       }
       processados++;
-      setProgresso(input.sessionKey, {
+      await setProgresso(input.sessionKey, {
         etapa: "Buscando custos por produto",
         atual: processados,
         total: skusComEntrada.length,
@@ -214,10 +214,10 @@ export async function sincronizarRelatorioCustos(input: {
     };
 
     cachePeriodo.set(chaveCache, resultado);
-    limparProgresso(input.sessionKey);
+    await limparProgresso(input.sessionKey);
     return resultado;
   } catch (err) {
-    limparProgresso(input.sessionKey);
+    await limparProgresso(input.sessionKey);
     if (err instanceof TinyAuthError) {
       return {
         ok: false,

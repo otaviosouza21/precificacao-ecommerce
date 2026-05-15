@@ -8,14 +8,26 @@ import {
   V3PedidosListResponse,
 } from "@/lib/tiny/types";
 import { setProgresso, limparProgresso } from "./progressoStore";
+import { ItemVendaSku } from "@/components/RelatorioCustos/tipos";
+import { isoParaBR, normalizaSku, processaLote } from "./_helpers";
 
 const LIMIT = 100;
 const POOL = 3;
 const SITUACAO_ENTREGUE = 4;
 
+export type SaidaSkuDetalhada = {
+  sku: string;
+  nome: string;
+  total: number;
+  receita: number;
+  numPedidos: number;
+  idProdutoCandidato?: string;
+  itens: ItemVendaSku[];
+};
+
 export type SaidasProdutosOk = {
   ok: true;
-  porSku: Record<string, { total: number; numPedidos: number }>;
+  porSku: Record<string, SaidaSkuDetalhada>;
   totalPedidos: number;
   errosParciais: string[];
 };
@@ -26,24 +38,9 @@ export type SaidasProdutosErro = {
   precisaRelogar?: boolean;
 };
 
-function norm(s: string | undefined | null) {
-  return (s || "").trim().toLowerCase();
-}
-
-async function processaLote<T>(
-  itens: T[],
-  pool: number,
-  fn: (item: T) => Promise<void>
-) {
-  let cursor = 0;
-  const workers = Array.from({ length: pool }).map(async () => {
-    while (true) {
-      const i = cursor++;
-      if (i >= itens.length) return;
-      await fn(itens[i]);
-    }
-  });
-  await Promise.all(workers);
+function dataISOdoPedido(p: V3PedidoCompleto): string {
+  const v = p.dataCriacao || p.dataPrevista || "";
+  return typeof v === "string" ? v.slice(0, 10) : "";
 }
 
 export async function getSaidasProdutosV3(input: {
@@ -53,7 +50,8 @@ export async function getSaidasProdutosV3(input: {
   dataFim: string;
   sessionKey: string;
 }): Promise<SaidasProdutosOk | SaidasProdutosErro> {
-  const skusAlvo = new Set(input.skus.map(norm));
+  const filtroAtivo = input.skus.length > 0 || input.ids.length > 0;
+  const skusAlvo = new Set(input.skus.map(normalizaSku));
   const idsAlvo = new Set(input.ids);
   const errosParciais: string[] = [];
 
@@ -61,7 +59,7 @@ export async function getSaidasProdutosV3(input: {
     const ids: string[] = [];
     let offset = 0;
     let total = Infinity;
-    setProgresso(input.sessionKey, {
+    await setProgresso(input.sessionKey, {
       etapa: "Listando pedidos entregues",
       atual: 0,
       total: 0,
@@ -79,7 +77,7 @@ export async function getSaidasProdutosV3(input: {
       const itens = resp.itens ?? [];
       for (const p of itens) if (p.id != null) ids.push(String(p.id));
       total = resp.paginacao?.total ?? ids.length;
-      setProgresso(input.sessionKey, {
+      await setProgresso(input.sessionKey, {
         etapa: "Listando pedidos entregues",
         atual: ids.length,
         total,
@@ -88,35 +86,92 @@ export async function getSaidasProdutosV3(input: {
       offset += LIMIT;
     }
 
-    const porSku: Record<string, { total: number; numPedidos: number }> = {};
+    const porSku: Record<string, SaidaSkuDetalhada> = {};
     let proc = 0;
-    setProgresso(input.sessionKey, {
+    await setProgresso(input.sessionKey, {
       etapa: "Lendo itens dos pedidos",
       atual: 0,
       total: ids.length,
     });
+
     await processaLote(ids, POOL, async (id) => {
       try {
-        const detalhe = await fetchTinyV3<V3PedidoCompleto>(ENDPOINTS.PEDIDO(id));
+        const detalhe = await fetchTinyV3<V3PedidoCompleto>(
+          ENDPOINTS.PEDIDO(id)
+        );
         const itens = detalhe.itens ?? [];
+        const dataISO = dataISOdoPedido(detalhe);
+        const numero = String(detalhe.numero ?? id);
         const skusNoPedido = new Set<string>();
+
         for (const it of itens) {
-          const idProd = it.produto?.id != null ? String(it.produto.id) : "";
-          const sku = it.produto?.sku || it.produto?.codigo || it.sku || it.codigo || "";
-          const skuNorm = norm(sku);
-          const match = (idProd && idsAlvo.has(idProd)) || (skuNorm && skusAlvo.has(skuNorm));
-          if (!match) continue;
+          const idProd =
+            it.produto?.id != null ? String(it.produto.id) : "";
+          const sku =
+            it.produto?.sku ||
+            it.produto?.codigo ||
+            it.sku ||
+            it.codigo ||
+            "";
+          const skuNorm = normalizaSku(sku);
+          if (!skuNorm) continue;
+
+          if (filtroAtivo) {
+            const match =
+              (idProd && idsAlvo.has(idProd)) || skusAlvo.has(skuNorm);
+            if (!match) continue;
+          }
+
           const qtd = Number(it.quantidade) || 0;
-          if (!porSku[skuNorm]) porSku[skuNorm] = { total: 0, numPedidos: 0 };
-          porSku[skuNorm].total += qtd;
+          const valorUnit = Number(it.valorUnitario) || 0;
+          const valorTotal = qtd * valorUnit;
+          const nome =
+            it.produto?.nome ||
+            it.produto?.descricao ||
+            it.descricao ||
+            skuNorm;
+
+          let bucket = porSku[skuNorm];
+          if (!bucket) {
+            bucket = {
+              sku: skuNorm,
+              nome,
+              total: 0,
+              receita: 0,
+              numPedidos: 0,
+              idProdutoCandidato: idProd || undefined,
+              itens: [],
+            };
+            porSku[skuNorm] = bucket;
+          } else if (!bucket.idProdutoCandidato && idProd) {
+            bucket.idProdutoCandidato = idProd;
+          }
+
+          bucket.total += qtd;
+          bucket.receita += valorTotal;
+          bucket.itens.push({
+            idPedido: id,
+            numero,
+            dataISO,
+            data: isoParaBR(dataISO),
+            quantidade: qtd,
+            valorUnitario: valorUnit,
+            valorTotal,
+          });
           skusNoPedido.add(skuNorm);
         }
-        for (const sku of skusNoPedido) porSku[sku].numPedidos += 1;
+
+        for (const sku of skusNoPedido) {
+          const b = porSku[sku];
+          if (b) b.numPedidos += 1;
+        }
       } catch (err) {
-        errosParciais.push(`pedido ${id}: ${err instanceof Error ? err.message : err}`);
+        errosParciais.push(
+          `pedido ${id}: ${err instanceof Error ? err.message : err}`
+        );
       } finally {
         proc++;
-        setProgresso(input.sessionKey, {
+        await setProgresso(input.sessionKey, {
           etapa: "Lendo itens dos pedidos",
           atual: proc,
           total: ids.length,
@@ -124,10 +179,9 @@ export async function getSaidasProdutosV3(input: {
       }
     });
 
-    limparProgresso(input.sessionKey);
     return { ok: true, porSku, totalPedidos: ids.length, errosParciais };
   } catch (err) {
-    limparProgresso(input.sessionKey);
+    await limparProgresso(input.sessionKey);
     if (err instanceof TinyAuthError) {
       return {
         ok: false,
@@ -142,7 +196,10 @@ export async function getSaidasProdutosV3(input: {
     const msg = err instanceof Error ? err.message : String(err);
     return {
       ok: false,
-      motivo: msg.includes("429") || msg.toLowerCase().includes("limite") ? "rate" : "outro",
+      motivo:
+        msg.includes("429") || msg.toLowerCase().includes("limite")
+          ? "rate"
+          : "outro",
       mensagem: msg,
     };
   }

@@ -94,7 +94,7 @@ export async function getRelatorioProdutosV3(input: {
   }
 
   try {
-    setProgresso(input.sessionKey, { etapa: "Listando notas de entrada", atual: 0, total: 0 });
+    await setProgresso(input.sessionKey, { etapa: "Listando notas de entrada", atual: 0, total: 0 });
     const cabecalhos: { id: string; numero: string; dataISO: string }[] = [];
     let offset = 0;
     let total = Infinity;
@@ -118,7 +118,7 @@ export async function getRelatorioProdutosV3(input: {
         cabecalhos.push({ id, numero: String(n.numero ?? ""), dataISO });
       }
       total = resp.paginacao?.total ?? cabecalhos.length;
-      setProgresso(input.sessionKey, {
+      await setProgresso(input.sessionKey, {
         etapa: "Listando notas de entrada",
         atual: cabecalhos.length,
         total,
@@ -128,7 +128,7 @@ export async function getRelatorioProdutosV3(input: {
     }
 
     let processadas = 0;
-    setProgresso(input.sessionKey, {
+    await setProgresso(input.sessionKey, {
       etapa: "Filtrando notas pelos produtos",
       atual: 0,
       total: cabecalhos.length,
@@ -179,7 +179,7 @@ export async function getRelatorioProdutosV3(input: {
         errosParciais.push(`nota ${cab.id}: ${err instanceof Error ? err.message : err}`);
       } finally {
         processadas++;
-        setProgresso(input.sessionKey, {
+        await setProgresso(input.sessionKey, {
           etapa: "Filtrando notas pelos produtos",
           atual: processadas,
           total: cabecalhos.length,
@@ -187,7 +187,7 @@ export async function getRelatorioProdutosV3(input: {
       }
     });
 
-    setProgresso(input.sessionKey, {
+    await setProgresso(input.sessionKey, {
       etapa: "Buscando custos por produto",
       atual: 0,
       total: input.produtos.length,
@@ -218,7 +218,7 @@ export async function getRelatorioProdutosV3(input: {
         errosParciais.push(`custos ${p.sku}: ${err instanceof Error ? err.message : err}`);
       } finally {
         proc++;
-        setProgresso(input.sessionKey, {
+        await setProgresso(input.sessionKey, {
           etapa: "Buscando custos por produto",
           atual: proc,
           total: input.produtos.length,
@@ -249,7 +249,7 @@ export async function getRelatorioProdutosV3(input: {
       };
     });
 
-    limparProgresso(input.sessionKey);
+    await limparProgresso(input.sessionKey);
 
     return {
       ok: true,
@@ -261,7 +261,7 @@ export async function getRelatorioProdutosV3(input: {
       },
     };
   } catch (err) {
-    limparProgresso(input.sessionKey);
+    await limparProgresso(input.sessionKey);
     if (err instanceof TinyAuthError) {
       return {
         ok: false,

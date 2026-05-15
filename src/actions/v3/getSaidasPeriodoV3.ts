@@ -64,7 +64,7 @@ export async function getSaidasPeriodoV3(input: {
     }
     total = resp.paginacao?.total ?? ids.length;
     if (input.sessionKey) {
-      setProgresso(input.sessionKey, {
+      await setProgresso(input.sessionKey, {
         etapa: "Listando pedidos entregues",
         atual: ids.length,
         total,
@@ -109,7 +109,7 @@ export async function getSaidasPeriodoV3(input: {
     } finally {
       processados++;
       if (input.sessionKey) {
-        setProgresso(input.sessionKey, {
+        await setProgresso(input.sessionKey, {
           etapa: "Lendo itens dos pedidos",
           atual: processados,
           total: ids.length,

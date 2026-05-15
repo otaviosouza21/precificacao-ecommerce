@@ -93,7 +93,7 @@ export async function getNotasEntradaV3(input: {
     }
     total = resp.paginacao?.total ?? cabecalhos.length;
     if (input.sessionKey) {
-      setProgresso(input.sessionKey, {
+      await setProgresso(input.sessionKey, {
         etapa: "Listando notas de entrada",
         atual: cabecalhos.length,
         total,
@@ -174,7 +174,7 @@ export async function getNotasEntradaV3(input: {
     } finally {
       processadas++;
       if (input.sessionKey) {
-        setProgresso(input.sessionKey, {
+        await setProgresso(input.sessionKey, {
           etapa: "Lendo itens das notas de entrada",
           atual: processadas,
           total: cabecalhos.length,
