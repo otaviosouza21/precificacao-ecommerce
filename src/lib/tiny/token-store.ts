@@ -49,23 +49,27 @@ class KvTokenStore implements TokenStore {
   }
   private async req(
     pathParts: string[],
-    body?: unknown
+    rawBody?: string
   ): Promise<unknown> {
     const path = pathParts.map(encodeURIComponent).join("/");
     const res = await fetch(`${this.url}/${path}`, {
-      method: body !== undefined ? "POST" : "GET",
+      method: rawBody !== undefined ? "POST" : "GET",
       headers: {
         Authorization: `Bearer ${this.token}`,
-        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(rawBody !== undefined
+          ? { "Content-Type": "text/plain" }
+          : {}),
       },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: rawBody,
       cache: "no-store",
     });
     if (!res.ok) throw new Error(`KV ${res.status}: ${await res.text()}`);
     return res.json();
   }
   async ler(): Promise<TinyTokens | null> {
-    const r = (await this.req(["get", this.chave])) as { result?: string | null };
+    const r = (await this.req(["get", this.chave])) as {
+      result?: string | null;
+    };
     if (!r?.result) return null;
     try {
       return JSON.parse(r.result) as TinyTokens;

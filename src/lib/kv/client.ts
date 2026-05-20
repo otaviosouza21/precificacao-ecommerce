@@ -18,16 +18,16 @@ export function resolverCredenciaisKv(): KvCredenciais | null {
 async function req(
   cred: KvCredenciais,
   pathParts: string[],
-  body?: unknown
+  rawBody?: string
 ): Promise<unknown> {
   const path = pathParts.map(encodeURIComponent).join("/");
   const res = await fetch(`${cred.url}/${path}`, {
-    method: body !== undefined ? "POST" : "GET",
+    method: rawBody !== undefined ? "POST" : "GET",
     headers: {
       Authorization: `Bearer ${cred.token}`,
-      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(rawBody !== undefined ? { "Content-Type": "text/plain" } : {}),
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: rawBody,
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`KV ${res.status}: ${await res.text()}`);
