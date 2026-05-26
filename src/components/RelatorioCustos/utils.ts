@@ -1,45 +1,11 @@
-export type NotaEntradaItem = {
-  idNota: string;
-  numero: string;
-  data: string;
-  dataISO: string;
-  quantidade: number;
-  precoUnitario: number;
-  valorTotal: number;
-};
-
-export type ItemVendaSku = {
-  idPedido: string;
-  numero: string;
-  dataISO: string;
-  data: string;
-  quantidade: number;
-  valorUnitario: number;
-  valorTotal: number;
-};
-
-export type OrigemCusto = "periodo" | "historico" | "indisponivel";
-
-export type ProdutoRelatorio = {
-  sku: string;
-  produto: string;
-  idProdutoTiny?: string;
-  quantidadeTotal: number;
-  valorTotalGeral: number;
-  custoMedio: number;
-  ultimoPreco: number;
-  ultimaData: string;
-  saidasNoPeriodo: number;
-  numPedidosVenda: number;
-  notas: NotaEntradaItem[];
-  custoUnitario?: number;
-  origemCusto?: OrigemCusto;
-  receita?: number;
-  cmv?: number;
-  margemReais?: number;
-  margemPercent?: number;
-  pedidos?: ItemVendaSku[];
-};
+import type {
+  NotaEntradaItem,
+  ProdutoRelatorio,
+} from "./types";
+import type {
+  EntradaCusto,
+  ProdutoAgrupado,
+} from "./processaCustos";
 
 export function formataMoeda(v: number): string {
   return v.toLocaleString("pt-BR", {
@@ -57,10 +23,20 @@ export function formataData(iso: string): string {
   return iso;
 }
 
-import type {
-  ProdutoAgrupado,
-  EntradaCusto,
-} from "./processaCustos";
+export function hojeISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+}
+
+export function diasAtrasISO(dias: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - dias);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+}
 
 export function adaptaPlanilhaParaRelatorio(
   agrupados: ProdutoAgrupado[],

@@ -104,9 +104,11 @@ export type V3NotaCompleta = V3NotaCabecalho & {
 
 export type V3PedidoCabecalho = {
   id?: string | number;
-  numero?: string;
+  numero?: string | number;
+  numeroPedido?: string | number;
   situacao?: number | string;
   dataCriacao?: string;
+  data?: string;
   dataPrevista?: string;
   valor?: number;
   cliente?: { nome?: string; cpfCnpj?: string };

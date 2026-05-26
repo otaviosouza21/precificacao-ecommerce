@@ -3,7 +3,7 @@
 import {
   OrigemCusto,
   ProdutoRelatorio,
-} from "@/components/RelatorioCustos/tipos";
+} from "@/components/RelatorioCustos/types";
 import { TinyAuthError } from "@/lib/tiny/types";
 import { processaLote, resolverIdProdutoPorSku } from "./_helpers";
 import { getCustosProdutoV3 } from "./getCustosProdutoV3";
@@ -191,6 +191,7 @@ export async function gerarRelatorioCmvV3(input: {
       const cmv = qtd * custoUnit;
       const margemReais = receita - cmv;
       const margemPercent = receita > 0 ? (margemReais / receita) * 100 : 0;
+
 
       receitaTotal += receita;
       cmvTotal += cmv;

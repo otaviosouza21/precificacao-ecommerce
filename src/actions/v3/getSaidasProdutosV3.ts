@@ -8,7 +8,7 @@ import {
   V3PedidosListResponse,
 } from "@/lib/tiny/types";
 import { setProgresso, limparProgresso } from "./progressoStore";
-import { ItemVendaSku } from "@/components/RelatorioCustos/tipos";
+import { ItemVendaSku } from "@/components/RelatorioCustos/types";
 import { isoParaBR, normalizaSku, processaLote } from "./_helpers";
 
 const LIMIT = 100;
@@ -39,8 +39,14 @@ export type SaidasProdutosErro = {
 };
 
 function dataISOdoPedido(p: V3PedidoCompleto): string {
-  const v = p.dataCriacao || p.dataPrevista || "";
+  const v = p.data || p.dataCriacao || p.dataPrevista || "";
   return typeof v === "string" ? v.slice(0, 10) : "";
+}
+
+function numeroDoPedido(p: V3PedidoCompleto, idFallback: string): string {
+  const n = p.numeroPedido ?? p.numero;
+  if (n == null || n === "") return idFallback;
+  return String(n);
 }
 
 export async function getSaidasProdutosV3(input: {
@@ -101,7 +107,7 @@ export async function getSaidasProdutosV3(input: {
         );
         const itens = detalhe.itens ?? [];
         const dataISO = dataISOdoPedido(detalhe);
-        const numero = String(detalhe.numero ?? id);
+        const numero = numeroDoPedido(detalhe, id);
         const skusNoPedido = new Set<string>();
 
         for (const it of itens) {

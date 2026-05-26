@@ -10,7 +10,7 @@ import {
 import {
   NotaEntradaItem,
   ProdutoRelatorio,
-} from "@/components/RelatorioCustos/tipos";
+} from "@/components/RelatorioCustos/types";
 import { getCustosProdutoV3 } from "./getCustosProdutoV3";
 import { limparProgresso, setProgresso } from "./progressoStore";
 

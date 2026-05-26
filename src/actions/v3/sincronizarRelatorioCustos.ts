@@ -6,7 +6,7 @@ import { TinyAuthError, V3ProdutosListResponse } from "@/lib/tiny/types";
 import {
   NotaEntradaItem,
   ProdutoRelatorio,
-} from "@/components/RelatorioCustos/tipos";
+} from "@/components/RelatorioCustos/types";
 import { getCustosProdutoV3 } from "./getCustosProdutoV3";
 import { getNotasEntradaV3 } from "./getNotasEntradaV3";
 import { getSaidasPeriodoV3 } from "./getSaidasPeriodoV3";
