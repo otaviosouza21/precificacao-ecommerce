@@ -1,11 +1,5 @@
-export default async function PrecificacaoPage() {
- /*  const produtosReturnApi = await getAllProdutos();
+import CalculadoraEcommerce from "@/components/Precificacao/Calculadora/CalculadoraEcommerce";
 
-  if (!produtosReturnApi.ok || !Array.isArray(produtosReturnApi.data)) {
-    return <div>Erro ao carregar os produtos: {produtosReturnApi.error}</div>;
-  }
-
-  const produtos = produtosReturnApi.data; */
-
-  return <div></div>;
+export default function PrecificacaoPage() {
+  return <CalculadoraEcommerce />;
 }

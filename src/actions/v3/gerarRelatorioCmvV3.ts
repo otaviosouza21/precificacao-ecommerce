@@ -70,6 +70,8 @@ export async function gerarRelatorioCmvV3(input: {
       sessionKey: input.sessionKey,
     });
 
+    
+
     if (!saidas.ok) {
       await limparProgresso(input.sessionKey);
       return {

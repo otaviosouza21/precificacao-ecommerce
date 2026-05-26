@@ -32,7 +32,7 @@ export const navigation: NavSection[] = [
         label: "Precificação",
         href: "/precificacao",
         icon: DollarSign,
-        status: "wip",
+        status: "active",
         description: "Cálculo de preços para marketplaces.",
         quickAccess: true,
       },
