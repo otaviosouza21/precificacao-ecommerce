@@ -132,10 +132,14 @@ export type V3PedidoItem = {
   descricao?: string;
   quantidade?: number;
   valorUnitario?: number;
+  valor?: number;
+  precoUnitario?: number;
+  valorTotal?: number;
 };
 
 export type V3PedidoCompleto = V3PedidoCabecalho & {
   itens?: V3PedidoItem[];
+  produtos?: V3PedidoItem[];
 };
 
 export type V3ProdutoCabecalho = {

@@ -7,12 +7,14 @@ type Props = {
   precoVenda: string;
   onPrecoVendaChange: (valor: string) => void;
   validacao: ResultadoValidacao | null;
+  margemDesejadaPct: number;
 };
 
 export default function ValidacaoPrecoCard({
   precoVenda,
   onPrecoVendaChange,
   validacao,
+  margemDesejadaPct,
 }: Props) {
   const positivo = (validacao?.lucro ?? 0) >= 0;
   const corResultado = positivo ? "text-emerald-300" : "text-red-400";
@@ -42,11 +44,14 @@ export default function ValidacaoPrecoCard({
         <Linha label="Taxa fixa aplicada">
           {validacao?.faixa ? brlConvert(validacao.taxaFixa) : "—"}
         </Linha>
+        <Linha label="Embalagem">
+          {validacao ? `− ${brlConvert(validacao.embalagem)}` : "—"}
+        </Linha>
         <Linha label="Valor que você recebe líquido">
           {validacao ? brlConvert(validacao.valorLiquido) : "—"}
         </Linha>
-        <Linha label="Custo + margem necessária">
-          {validacao ? brlConvert(validacao.custoMargemNecessaria) : "—"}
+        <Linha label="Custo do produto">
+          {validacao ? brlConvert(validacao.custo) : "—"}
         </Linha>
         <div className="flex items-center justify-between gap-4 px-4 py-3 bg-sky-900/40">
           <span className="text-sm font-semibold text-sky-100">
@@ -58,7 +63,19 @@ export default function ValidacaoPrecoCard({
             </div>
             {validacao && (
               <div className={`text-xs ${corResultado}`}>
-                margem real: {validacao.margemReal.toFixed(2)}%
+                margem sobre o custo: {validacao.margemSobreCusto.toFixed(2)}%
+              </div>
+            )}
+            {validacao && (
+              <div
+                className={`text-xs ${
+                  validacao.atendeMargemMinima
+                    ? "text-emerald-300"
+                    : "text-orange-300"
+                }`}
+              >
+                {validacao.atendeMargemMinima ? "✓ acima" : "✗ abaixo"} da mínima
+                ({margemDesejadaPct}%)
               </div>
             )}
           </div>

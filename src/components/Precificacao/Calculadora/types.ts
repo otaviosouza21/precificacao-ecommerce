@@ -42,8 +42,10 @@ export type ResultadoValidacao = {
   faixa: FaixaComissao | null;
   comissaoPct: number;
   taxaFixa: number;
+  embalagem: number;
   valorLiquido: number;
-  custoMargemNecessaria: number;
+  custo: number;
   lucro: number;
-  margemReal: number;
+  margemSobreCusto: number;
+  atendeMargemMinima: boolean;
 };

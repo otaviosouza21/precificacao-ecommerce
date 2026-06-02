@@ -16,6 +16,9 @@ export type CmvResultadoOk = {
   produtos: ProdutoRelatorio[];
   meta: {
     totalPedidos: number;
+    pedidosConsiderados: number;
+    situacoesEncontradas: Record<string, number>;
+    itensSemSku: number;
     totalSkusVendidos: number;
     receitaTotal: number;
     cmvTotal: number;
@@ -47,7 +50,7 @@ export async function gerarRelatorioCmvV3(input: {
   sessionKey: string;
   forcar?: boolean;
 }): Promise<CmvResultadoOk | CmvResultadoErro> {
-  const chaveCache = `${input.dataInicio}|${input.dataFim}`;
+  const chaveCache = `v2|${input.dataInicio}|${input.dataFim}`;
   if (!input.forcar) {
     const cached = cachePeriodo.get(chaveCache);
     if (cached) {
@@ -237,6 +240,9 @@ export async function gerarRelatorioCmvV3(input: {
       produtos,
       meta: {
         totalPedidos: saidas.totalPedidos,
+        pedidosConsiderados: saidas.pedidosConsiderados,
+        situacoesEncontradas: saidas.situacoesEncontradas,
+        itensSemSku: saidas.itensSemSku,
         totalSkusVendidos: skusVendidos.length,
         receitaTotal,
         cmvTotal,

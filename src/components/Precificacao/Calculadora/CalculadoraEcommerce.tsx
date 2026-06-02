@@ -68,9 +68,17 @@ export default function CalculadoraEcommerce() {
       valor,
       custoEfetivo,
       margemDesejadaPct,
+      embalagem,
       marketplaceAtual.faixas
     );
-  }, [produto, marketplaceAtual, precoVenda, custoEfetivo, margemDesejadaPct]);
+  }, [
+    produto,
+    marketplaceAtual,
+    precoVenda,
+    custoEfetivo,
+    margemDesejadaPct,
+    embalagem,
+  ]);
 
   return (
     <div className="p-4 bg-slate-800 m-4 rounded-2xl text-white min-h-[calc(100vh-2rem)]">
@@ -143,6 +151,7 @@ export default function CalculadoraEcommerce() {
                 precoVenda={precoVenda}
                 onPrecoVendaChange={setPrecoVenda}
                 validacao={validacao}
+                margemDesejadaPct={margemDesejadaPct}
               />
             </div>
           </>

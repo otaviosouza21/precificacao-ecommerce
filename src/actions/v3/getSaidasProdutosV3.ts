@@ -13,7 +13,34 @@ import { isoParaBR, normalizaSku, processaLote } from "./_helpers";
 
 const LIMIT = 100;
 const POOL = 3;
-const SITUACAO_ENTREGUE = 4;
+
+const SITUACOES_FINALIZADAS = new Set([
+  "entregue",
+]);
+
+function ehSituacaoFinalizada(situacao: unknown): boolean {
+  if (situacao == null) return false;
+  const norm = String(situacao).trim().toLowerCase().replace(/\s+/g, "_");
+  return SITUACOES_FINALIZADAS.has(norm);
+}
+
+function valorUnitarioItem(it: {
+  valorUnitario?: number;
+  valor?: number;
+  precoUnitario?: number;
+  valorTotal?: number;
+  quantidade?: number;
+}): number {
+  const candidatos = [it.valorUnitario, it.valor, it.precoUnitario];
+  for (const c of candidatos) {
+    const n = Number(c);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  const qtd = Number(it.quantidade) || 0;
+  const total = Number(it.valorTotal) || 0;
+  if (qtd > 0 && total > 0) return total / qtd;
+  return 0;
+}
 
 export type SaidaSkuDetalhada = {
   sku: string;
@@ -29,6 +56,9 @@ export type SaidasProdutosOk = {
   ok: true;
   porSku: Record<string, SaidaSkuDetalhada>;
   totalPedidos: number;
+  pedidosConsiderados: number;
+  situacoesEncontradas: Record<string, number>;
+  itensSemSku: number;
   errosParciais: string[];
 };
 export type SaidasProdutosErro = {
@@ -66,7 +96,7 @@ export async function getSaidasProdutosV3(input: {
     let offset = 0;
     let total = Infinity;
     await setProgresso(input.sessionKey, {
-      etapa: "Listando pedidos entregues",
+      etapa: "Listando pedidos",
       atual: 0,
       total: 0,
     });
@@ -75,24 +105,28 @@ export async function getSaidasProdutosV3(input: {
         query: {
           dataInicial: input.dataInicio,
           dataFinal: input.dataFim,
-          situacao: SITUACAO_ENTREGUE,
           limit: LIMIT,
           offset,
         },
       });
       const itens = resp.itens ?? [];
       for (const p of itens) if (p.id != null) ids.push(String(p.id));
-      total = resp.paginacao?.total ?? ids.length;
+      const totalApi = resp.paginacao?.total;
+      if (typeof totalApi === "number") total = totalApi;
+      else if (itens.length < LIMIT) total = ids.length;
       await setProgresso(input.sessionKey, {
-        etapa: "Listando pedidos entregues",
+        etapa: "Listando pedidos",
         atual: ids.length,
         total,
       });
-      if (itens.length < LIMIT) break;
+      if (itens.length === 0) break;
       offset += LIMIT;
     }
 
     const porSku: Record<string, SaidaSkuDetalhada> = {};
+    const situacoesEncontradas: Record<string, number> = {};
+    let pedidosConsiderados = 0;
+    let itensSemSku = 0;
     let proc = 0;
     await setProgresso(input.sessionKey, {
       etapa: "Lendo itens dos pedidos",
@@ -105,7 +139,18 @@ export async function getSaidasProdutosV3(input: {
         const detalhe = await fetchTinyV3<V3PedidoCompleto>(
           ENDPOINTS.PEDIDO(id)
         );
-        const itens = detalhe.itens ?? [];
+
+        const sitChave = String(detalhe.situacao ?? "desconhecida")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "_") || "desconhecida";
+        situacoesEncontradas[sitChave] =
+          (situacoesEncontradas[sitChave] ?? 0) + 1;
+
+        if (!ehSituacaoFinalizada(detalhe.situacao)) return;
+        pedidosConsiderados++;
+
+        const itens = detalhe.itens ?? detalhe.produtos ?? [];
         const dataISO = dataISOdoPedido(detalhe);
         const numero = numeroDoPedido(detalhe, id);
         const skusNoPedido = new Set<string>();
@@ -120,7 +165,10 @@ export async function getSaidasProdutosV3(input: {
             it.codigo ||
             "";
           const skuNorm = normalizaSku(sku);
-          if (!skuNorm) continue;
+          if (!skuNorm) {
+            itensSemSku++;
+            continue;
+          }
 
           if (filtroAtivo) {
             const match =
@@ -129,7 +177,7 @@ export async function getSaidasProdutosV3(input: {
           }
 
           const qtd = Number(it.quantidade) || 0;
-          const valorUnit = Number(it.valorUnitario) || 0;
+          const valorUnit = valorUnitarioItem(it);
           const valorTotal = qtd * valorUnit;
           const nome =
             it.produto?.nome ||
@@ -185,7 +233,15 @@ export async function getSaidasProdutosV3(input: {
       }
     });
 
-    return { ok: true, porSku, totalPedidos: ids.length, errosParciais };
+    return {
+      ok: true,
+      porSku,
+      totalPedidos: ids.length,
+      pedidosConsiderados,
+      situacoesEncontradas,
+      itensSemSku,
+      errosParciais,
+    };
   } catch (err) {
     await limparProgresso(input.sessionKey);
     if (err instanceof TinyAuthError) {

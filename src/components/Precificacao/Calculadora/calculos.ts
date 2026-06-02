@@ -75,27 +75,29 @@ export function calcularValidacao(
   precoVenda: number,
   custo: number,
   margemDesejadaPct: number,
+  embalagem: number,
   faixas: FaixaComissao[]
 ): ResultadoValidacao {
   const faixa = encontrarFaixaPorPreco(precoVenda, faixas);
   const comissaoPct = faixa?.comissaoPct ?? 0;
   const taxaFixa = faixa?.taxaFixa ?? 0;
-  const valorLiquido = precoVenda * (1 - comissaoPct / 100) - taxaFixa;
-  const custoMargemNecessaria = calcularCustoMargemBase(
-    custo,
-    margemDesejadaPct
-  );
-  const lucro = valorLiquido - custoMargemNecessaria;
-  const margemReal = precoVenda > 0 ? (lucro / precoVenda) * 100 : 0;
+  const valorLiquido =
+    precoVenda * (1 - comissaoPct / 100) - taxaFixa - embalagem;
+  // Lucro e margem são sempre sobre o custo do produto (raciocínio da planilha).
+  const lucro = valorLiquido - custo;
+  const margemSobreCusto = custo > 0 ? (lucro / custo) * 100 : 0;
+  const atendeMargemMinima = custo > 0 && margemSobreCusto >= margemDesejadaPct;
 
   return {
     faixa,
     comissaoPct,
     taxaFixa,
+    embalagem,
     valorLiquido,
-    custoMargemNecessaria,
+    custo,
     lucro,
-    margemReal,
+    margemSobreCusto,
+    atendeMargemMinima,
   };
 }
 

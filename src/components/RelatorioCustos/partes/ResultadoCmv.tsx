@@ -38,8 +38,8 @@ export default function ResultadoCmv({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <DashCard
           icon={<ShoppingBag className="w-5 h-5 text-sky-400" />}
-          label="Pedidos entregues"
-          value={m.totalPedidos.toString()}
+          label="Pedidos entregues / total"
+          value={`${m.pedidosConsiderados} / ${m.totalPedidos}`}
           bg="from-sky-900/60 to-sky-800/40"
         />
         <DashCard
@@ -88,6 +88,34 @@ export default function ResultadoCmv({
           </span>
         )}
       </div>
+
+      {Object.keys(m.situacoesEncontradas).length > 0 && (
+        <div className="bg-slate-900/60 border border-sky-700/30 rounded-xl p-3 mb-4 text-xs text-sky-100 flex items-start gap-2">
+          <Info className="w-4 h-4 mt-0.5 shrink-0" />
+          <div className="flex flex-wrap gap-2">
+            <span className="text-sky-300">Situações dos pedidos no período:</span>
+            {Object.entries(m.situacoesEncontradas)
+              .sort((a, b) => b[1] - a[1])
+              .map(([sit, qtd]) => (
+                <span
+                  key={sit}
+                  className={`px-2 py-0.5 rounded-full ${
+                    sit === "entregue"
+                      ? "bg-emerald-700/60 text-emerald-100"
+                      : "bg-slate-700/60 text-slate-200"
+                  }`}
+                >
+                  {sit}: {qtd}
+                </span>
+              ))}
+            {m.itensSemSku > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-amber-700/60 text-amber-100">
+                {m.itensSemSku} itens sem SKU ignorados
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {(m.skusComFallback > 0 || m.skusSemCusto > 0) && (
         <div className="bg-amber-900/30 border border-amber-700/40 rounded-xl p-3 mb-4 text-xs text-amber-100 flex items-start gap-2">
