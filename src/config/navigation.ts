@@ -1,12 +1,15 @@
 import {
   Activity,
+  Building2,
   DollarSign,
   MessageCircle,
   RefreshCw,
   ShoppingCart,
+  UserCog,
   Users,
   type LucideIcon,
 } from "lucide-react";
+import type { Role } from "@/lib/auth/types";
 
 export type NavStatus = "active" | "wip" | "placeholder";
 
@@ -17,6 +20,8 @@ export type NavItem = {
   status: NavStatus;
   description?: string;
   quickAccess?: boolean;
+  /** Se definido, o item só aparece para estes perfis. */
+  roles?: Role[];
 };
 
 export type NavSection = {
@@ -74,6 +79,27 @@ export const navigation: NavSection[] = [
         href: "#",
         icon: MessageCircle,
         status: "placeholder",
+      },
+    ],
+  },
+  {
+    title: "Gestão",
+    items: [
+      {
+        label: "Usuários",
+        href: "/usuarios",
+        icon: UserCog,
+        status: "active",
+        description: "Cadastro e permissões de usuários.",
+        roles: ["ADMINISTRADOR", "MASTER"],
+      },
+      {
+        label: "Empresas",
+        href: "/empresas",
+        icon: Building2,
+        status: "active",
+        description: "Cadastro de empresas do sistema.",
+        roles: ["ADMINISTRADOR"],
       },
     ],
   },

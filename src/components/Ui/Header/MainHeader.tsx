@@ -1,16 +1,30 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, KeyRound, LogOut, User } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { navigation, navStyles, type NavItem } from "@/config/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function MainHeader() {
   const [collapsed, setCollapsed] = useState(true);
   const asideRef = useRef<HTMLElement | null>(null);
   const pathname = usePathname();
+  const { usuario } = useAuth();
+
+  // Itens com `roles` só aparecem para os perfis permitidos; seções
+  // que ficam sem itens visíveis são ocultadas.
+  const secoesVisiveis = navigation
+    .map((section) => ({
+      ...section,
+      items: section.items.filter(
+        (item) =>
+          !item.roles || (usuario && item.roles.includes(usuario.role)),
+      ),
+    }))
+    .filter((section) => section.items.length > 0);
 
   useEffect(() => {
     if (collapsed) return;
@@ -54,7 +68,7 @@ export default function MainHeader() {
         <SidebarHeader collapsed={collapsed} onToggle={toggleMenu} />
 
         <nav className="flex-1 overflow-y-auto px-2 pb-4">
-          {navigation.map((section) => (
+          {secoesVisiveis.map((section) => (
             <SidebarSection
               key={section.title}
               title={section.title}
@@ -120,19 +134,60 @@ function SidebarHeader({
 }
 
 function SidebarFooter({ collapsed }: { collapsed: boolean }) {
+  const { usuario, logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/login");
+  };
+
   return (
-    <div className="px-2 pb-4 pt-3 border-t border-sky-700/60">
+    <div className="px-2 pb-4 pt-3 border-t border-sky-700/60 space-y-0.5">
       <div
         className={twMerge(
-          "flex items-center gap-3 px-2 py-2 rounded cursor-pointer hover:bg-sky-900 transition-colors",
+          "flex items-center gap-3 px-2 py-2 rounded",
           collapsed && "justify-center",
           navStyles.sidebarTextMuted,
         )}
-        title={collapsed ? "Perfil" : undefined}
+        title={collapsed ? usuario?.nome : undefined}
       >
         <User size={20} className="shrink-0" />
-        {!collapsed && <span className="text-sm font-medium">Perfil</span>}
+        {!collapsed && (
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-medium truncate text-white">
+              {usuario?.nome ?? "Perfil"}
+            </span>
+            <span className="text-[11px] truncate">
+              {usuario?.email}
+            </span>
+          </div>
+        )}
       </div>
+      <Link
+        href="/trocar-senha"
+        className={twMerge(
+          "flex items-center gap-3 px-2 py-2 rounded cursor-pointer hover:bg-sky-900 transition-colors w-full",
+          collapsed && "justify-center",
+          navStyles.sidebarTextMuted,
+        )}
+        title={collapsed ? "Trocar senha" : undefined}
+      >
+        <KeyRound size={18} className="shrink-0" />
+        {!collapsed && <span className="text-sm font-medium">Trocar senha</span>}
+      </Link>
+      <button
+        onClick={handleLogout}
+        className={twMerge(
+          "flex items-center gap-3 px-2 py-2 rounded cursor-pointer hover:bg-sky-900 transition-colors w-full",
+          collapsed && "justify-center",
+          navStyles.sidebarTextMuted,
+        )}
+        title={collapsed ? "Sair" : undefined}
+      >
+        <LogOut size={18} className="shrink-0" />
+        {!collapsed && <span className="text-sm font-medium">Sair</span>}
+      </button>
     </div>
   );
 }

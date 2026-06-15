@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
-import MainHeader from "@/components/Ui/Header/MainHeader";
+import AppShell from "@/components/Auth/AppShell";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastContainer } from "react-toastify";
 
 const poppins = Poppins({
@@ -25,8 +26,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${poppins.variable} antialiased flex`}>
-        <MainHeader />
-        <main className="ml-15 flex-1 min-h-screen">{children}</main>
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
         <ToastContainer />
       </body>
     </html>
