@@ -4,6 +4,7 @@ import { Loader2, Upload, X, FileSpreadsheet } from "lucide-react";
 import { Dispatch, SetStateAction, useState } from "react";
 import FiltraJsonShopee, {
   ObjetoPlanilhaFinal,
+  PlanilhaShopeeError,
   PlanilhaXlsx,
 } from "./FiltraJsonShopee";
 import * as XLSX from "xlsx";
@@ -42,8 +43,21 @@ export default function ReadXlsx({ setDataPlanilha }: InputFileProps) {
       const worksheet = workbook.Sheets[sheet];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-      const dataFormatada = FiltraJsonShopee(jsonData as PlanilhaXlsx);
-      setDataPlanilha(dataFormatada);
+      try {
+        const dataFormatada = FiltraJsonShopee(jsonData as PlanilhaXlsx);
+        setDataPlanilha(dataFormatada);
+      } catch (error) {
+        setUploadStatus("success");
+        if (error instanceof PlanilhaShopeeError) {
+          alert(error.message);
+        } else {
+          alert(
+            "Não foi possível processar a planilha. Verifique o arquivo e tente novamente.",
+          );
+          console.error("Erro ao processar planilha Shopee:", error);
+        }
+        return;
+      }
 
       setTimeout(() => {
         setSheetName(sheet);
