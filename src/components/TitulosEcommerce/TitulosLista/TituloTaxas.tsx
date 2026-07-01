@@ -42,7 +42,7 @@ export default function TituloTaxas({ item }: { item: ConciliacaoItem }) {
                 -{" "}
                 {brlConvert(
                   item.regra.perc_comissao_shopee *
-                    (item.valor_titulo + item.subisidio_pix),
+                  (item.valor_titulo + item.subisidio_pix),
                 )}
               </span>
             </div>

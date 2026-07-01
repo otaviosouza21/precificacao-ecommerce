@@ -49,6 +49,13 @@ export const navigation: NavSection[] = [
         description: "Conciliação de recebimentos Shopee × Tiny.",
       },
       {
+        label: "Títulos Ecommerce V2",
+        href: "/titulos-ecommerce/v2",
+        icon: ShoppingCart,
+        status: "active",
+        description: "Conciliação direto pela API da Shopee (sem planilha).",
+      },
+      {
         label: "Relatório de Custos",
         href: "/produtos/relatorios/custos",
         icon: Activity,

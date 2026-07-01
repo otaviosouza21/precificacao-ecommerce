@@ -10,12 +10,17 @@ import { calculaTaxas, RegraComissao } from "./functions/formataDados";
 
 export type ConciliacaoItem = {
   id_ecommerce: string;
+  sku: string;
+  // Preço base do cálculo das taxas. Na v1 é o próprio valor do título do Tiny.
+  preco_base: number;
   descricao_anuncio: string;
   dt_criacao_pedido: string;
   valor_recebido: number;
   valor_titulo: number;
   valor_calculado: number;
   valor_taxas: number;
+  preco_com_rebate: number;
+  valor_rebate: number;
   cupom_rebate: number;
   historico?: string;
   cliente?: string;
@@ -85,34 +90,32 @@ export default function TitulosEcommerce() {
 
         // Se achou título relacionado, adiciona à conciliação
         if (tituloRelacionado) {
+          // Base do cálculo = valor do título do Tiny (como era antes).
+          const valorTitulo = +tituloRelacionado.conta.valor;
+          const taxas = calculaTaxas({ planilha: planilhaItem, tituloRelacionado });
+
           conciliados.push({
             id_ecommerce: planilhaItem.id_ecommerce,
+            sku: planilhaItem.sku,
+            preco_base: valorTitulo,
             descricao_anuncio: planilhaItem.nome_anuncio,
             dt_criacao_pedido: planilhaItem.dt_criacao_pedido,
             valor_recebido: +planilhaItem.valor_recebido,
-            valor_titulo: +tituloRelacionado.conta.valor,
+            valor_titulo: valorTitulo,
             subisidio_pix: +planilhaItem.subisidio_pix,
-            valor_calculado: +calculaTaxas({
-              planilha: planilhaItem,
-              tituloRelacionado,
-            }).valorCalculado.toFixed(2),
-            valor_taxas: +calculaTaxas({
-              planilha: planilhaItem,
-              tituloRelacionado,
-            }).valorTaxa.toFixed(2),
+            valor_calculado: +taxas.valorCalculado.toFixed(2),
+            valor_taxas: +taxas.valorTaxa.toFixed(2),
+            preco_com_rebate: valorTitulo,
+            valor_rebate: 0,
             cupom_rebate: +planilhaItem.cupom_rebate,
             historico: tituloRelacionado.conta.historico,
             cliente: tituloRelacionado.conta.nome_cliente,
             data_recebimento: planilhaItem.dt_conclusao,
             documento: tituloRelacionado.conta.numero_doc,
             id: tituloRelacionado.conta.id,
-            regra: calculaTaxas({ planilha: planilhaItem, tituloRelacionado })
-              .regra,
+            regra: taxas.regra,
             taxa_afiliados: +planilhaItem.taxa_afiliados,
-            houveArredondamento: calculaTaxas({
-              planilha: planilhaItem,
-              tituloRelacionado,
-            }).houveArredondamento,
+            houveArredondamento: taxas.houveArredondamento,
           });
 
           // Marca como processado

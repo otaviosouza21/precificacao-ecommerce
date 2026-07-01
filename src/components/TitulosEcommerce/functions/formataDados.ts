@@ -63,20 +63,26 @@ export const defineRegraComissao = (valor_titulo: number): REGRAS_COMISSAO => {
 export const calculaTaxas = ({
   planilha: planilhaItem,
   tituloRelacionado,
+  precoBase,
 }: CalculaTaxasProps): CalculaTaxasReturn => {
   const { dt_criacao_pedido, valor_recebido, taxa_afiliados } = planilhaItem;
   const { conta } = tituloRelacionado;
+
+  // Base do cálculo = preço promocional na tabela Shopee (fonte de verdade).
+  // Sem esse preço (produto não encontrado), usa o valor do título do Tiny.
+  const valorProduto =
+    precoBase != null && precoBase > 0 ? precoBase : +conta.valor;
 
   const dataCriacaoData = new Date(dt_criacao_pedido).getMonth();
 
   const regra =
     dataCriacaoData >= 2
-      ? tabelaComissao[defineRegraComissao(+conta.valor)]
+      ? tabelaComissao[defineRegraComissao(valorProduto)]
       : tabelaComissao.REGRA_1;
 
   // PASSO 1: Calcular base de cálculo (valor - subsídio PIX)
   const subsidio = Math.abs(+planilhaItem.subisidio_pix);
-  const valorBase = +conta.valor + subsidio;
+  const valorBase = valorProduto + subsidio;
 
   // PASSO 2: Calcular taxas brutas sobre a base
   const comissaoBruta =
@@ -90,7 +96,7 @@ export const calculaTaxas = ({
   let valorTaxa = comissaoLiquida - taxa_afiliados;
 
   // PASSO 5: Calcular valor líquido
-  let valorCalculado = +conta.valor - valorTaxa;
+  let valorCalculado = valorProduto - valorTaxa;
 
   const diferencaRecebidoCalculado = (+valor_recebido - valorCalculado).toFixed(
     2,
@@ -110,7 +116,7 @@ export const calculaTaxas = ({
     regra,
     houveArredondamento,
     detalhamento: {
-      valorOriginal: +conta.valor,
+      valorOriginal: valorProduto,
       valorBase: valorBase,
       comissaoBruta: comissaoBruta,
       comissaoLiquida: comissaoLiquida,

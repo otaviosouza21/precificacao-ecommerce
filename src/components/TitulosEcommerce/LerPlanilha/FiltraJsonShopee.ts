@@ -1,9 +1,11 @@
 export interface ObjetoPlanilhaFinal {
   id_ecommerce: string;
+  sku: string;
   nome_anuncio: string;
   dt_criacao_pedido: string;
   dt_conclusao: string;
   valor_recebido: string;
+  preco_com_rebate: number;
   cupom_rebate: number;
   taxa_afiliados: number;
   subisidio_pix: number;
@@ -28,10 +30,13 @@ export class PlanilhaShopeeError extends Error {
 const HEADERS = {
   ver: "Ver", // tipo da linha: "Order" (nível pedido) ou "Sku" (nível item)
   id_ecommerce: "ID do pedido",
+  sku: "SKU", // código do produto (linha "Sku") — chave p/ casar com a API de produtos
   nome_anuncio: "Nome do produto",
   dt_criacao_pedido: "Data de criação do pedido",
   dt_conclusao: "Data de conclusão do pagamento",
   valor_recebido: "Quantia total lançada (R$)",
+  // Preço do produto já com o rebate aplicado (o preço original só existe no título do Tiny).
+  preco_produto: "Preço do produto",
   taxa_afiliados: "Taxa de comissão Afiliados do Vendedor",
   // Campos a nível de pedido: só preenchidos na linha "Order" (na "Sku" vêm "-").
   subisidio_pix: "Ajuste por pagamento via PIX",
@@ -136,10 +141,12 @@ export function montaObjetoPlanilha(
 
     return {
       id_ecommerce: id,
+      sku: texto(get(sku, HEADERS.sku)).trim(),
       nome_anuncio: texto(get(sku, HEADERS.nome_anuncio)),
       dt_criacao_pedido: texto(get(sku, HEADERS.dt_criacao_pedido)),
       dt_conclusao: texto(get(sku, HEADERS.dt_conclusao)),
       valor_recebido: texto(get(sku, HEADERS.valor_recebido)),
+      preco_com_rebate: toNumber(get(sku, HEADERS.preco_produto)),
       cupom_rebate: toNumber(get(order, HEADERS.cupom_rebate)),
       taxa_afiliados: toNumber(get(sku, HEADERS.taxa_afiliados)),
       subisidio_pix: toNumber(get(order, HEADERS.subisidio_pix)),

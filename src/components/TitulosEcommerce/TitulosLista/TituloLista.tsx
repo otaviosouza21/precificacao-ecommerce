@@ -12,12 +12,18 @@ type TituloListaProps = {
   recebidosConciliados: ConciliacaoItem[];
   setAtualizar: Dispatch<SetStateAction<boolean>>;
   atualizar: boolean;
+  // Rótulo da coluna de preço base. Default reflete a v1 (base = tabela Tiny).
+  // A v2 usa o preço base direto da Shopee.
+  baseLabel?: string;
+  baseSublabel?: string;
 };
 
 export default function TituloLista({
   recebidosConciliados,
   atualizar,
   setAtualizar,
+  baseLabel = "Tabela Tiny",
+  baseSublabel = "Base",
 }: TituloListaProps) {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
@@ -212,6 +218,15 @@ export default function TituloLista({
 
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   <div className="flex flex-col">
+                    <span>{baseLabel}</span>
+                    <span className="text-emerald-600 font-bold text-xs">
+                      {baseSublabel}
+                    </span>
+                  </div>
+                </th>
+
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                  <div className="flex flex-col">
                     <span>Título</span>
                     <span className="text-blue-500 font-bold text-xs">
                       Tiny
@@ -323,6 +338,10 @@ export default function TituloLista({
                           <AlertCircle className="h-4 w-4" />
                         </div>
                       )}
+                    </td>
+
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-700">
+                      {formatCurrency(item.preco_base)}
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
