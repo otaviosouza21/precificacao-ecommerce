@@ -7,6 +7,7 @@ import buscaTitulosTiny from "@/actions/buscaTitulosTiny";
 import { TitulosReceberApiTiny } from "@/api/types/api-types";
 import TituloLista from "./TitulosLista/TituloLista";
 import { calculaTaxas, RegraComissao } from "./functions/formataDados";
+import type { DetalheTaxasV2 } from "./v2/calculoV2";
 
 export type ConciliacaoItem = {
   id_ecommerce: string;
@@ -31,6 +32,8 @@ export type ConciliacaoItem = {
   taxa_afiliados: number;
   houveArredondamento: boolean;
   subisidio_pix: number;
+  // Detalhamento por item (só a v2 preenche; usado no tooltip de taxas).
+  detalheV2?: DetalheTaxasV2;
 };
 
 export default function TitulosEcommerce() {

@@ -60,6 +60,11 @@ export const defineRegraComissao = (valor_titulo: number): REGRAS_COMISSAO => {
   }
 };
 
+// Retorna a regra de comissão (perc/taxa fixa) para um dado valor. Usado pelo
+// cálculo por item da v2. Não altera o comportamento da v1.
+export const regraPorValor = (valor: number): RegraComissao =>
+  tabelaComissao[defineRegraComissao(valor)];
+
 export const calculaTaxas = ({
   planilha: planilhaItem,
   tituloRelacionado,

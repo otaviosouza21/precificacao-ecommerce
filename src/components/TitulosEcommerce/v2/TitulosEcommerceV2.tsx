@@ -8,13 +8,12 @@ import {
   detalharVariosPedidos,
   FinanceiroApiError,
   listarRenda,
-  type ComposicaoRenda,
   type LancamentoRenda,
 } from "@/lib/financeiro";
-import { calculaTaxas } from "../functions/formataDados";
 import TituloLista from "../TitulosLista/TituloLista";
 import { ConciliacaoItem } from "../TitulosEcommerce";
 import PeriodoRendaForm from "./PeriodoRendaForm";
+import { calculaLiquidoV2 } from "./calculoV2";
 
 // ---------------------------------------------------------------------------
 // Helpers de data
@@ -47,39 +46,6 @@ function dataCriacaoDoPedido(orderSn: string, fallbackIso: string): string {
     }
   }
   return isoParaDataBR(fallbackIso);
-}
-
-// ---------------------------------------------------------------------------
-// Preço base (= preço de venda do anúncio na Shopee, já com o desconto)
-// ---------------------------------------------------------------------------
-
-// Base = preço de venda (com desconto) do pedido na Shopee — equivale ao
-// price_info.current_price do anúncio. Usa o valor a nível de PEDIDO
-// (order_selling_price), que é o total correto da venda; somar
-// items[].selling_price × qtd super-conta em kits/itens com quantidade.
-function baseSellingDosItens(comp: ComposicaoRenda | undefined): number | null {
-  if (!comp) return null;
-
-  if (typeof comp.order_selling_price === "number")
-    return comp.order_selling_price;
-  if (typeof comp.order_discounted_price === "number")
-    return comp.order_discounted_price;
-
-  // Fallback: soma dos itens (só quando não há total a nível de pedido).
-  const itens = Array.isArray(comp.items) ? comp.items : [];
-  let soma = 0;
-  let algum = false;
-  for (const it of itens) {
-    const preco = typeof it.selling_price === "number" ? it.selling_price : null;
-    if (preco == null) continue;
-    const qtd =
-      typeof it.quantity_purchased === "number" && it.quantity_purchased > 0
-        ? it.quantity_purchased
-        : 1;
-    soma += preco * qtd;
-    algum = true;
-  }
-  return algum ? +soma.toFixed(2) : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -274,56 +240,33 @@ export default function TitulosEcommerceV2() {
       // 4) Monta a conciliação no mesmo formato da v1.
       const conciliados: ConciliacaoItem[] = pares.map(({ grupo, titulo }) => {
         const detalhe = detalhes.get(grupo.pedido);
+        const valorRecebido = +grupo.valorRecebido.toFixed(2);
 
-        // Base de cálculo = preço de venda (com desconto) do pedido na Shopee.
-        // Sem detalhe, cai no valor do título do Tiny.
-        const precoBase = baseSellingDosItens(detalhe?.composicao);
-        const valorBase = precoBase ?? +titulo.conta.valor;
-
-        // Comissão de afiliados (order_ams_commission_fee) entra como dedução
-        // extra. O calculaTaxas faz `taxa = comissão - taxa_afiliados`, então
-        // passamos NEGATIVO para que reduza o líquido corretamente.
-        const afiliados =
-          typeof detalhe?.composicao?.order_ams_commission_fee === "number"
-            ? detalhe.composicao.order_ams_commission_fee
-            : 0;
-        const taxaAfiliados = -Math.abs(afiliados);
-
-        const taxas = calculaTaxas({
-          planilha: {
-            id_ecommerce: grupo.pedido,
-            sku: "",
-            nome_anuncio: grupo.pedido,
-            dt_criacao_pedido: dataCriacaoDoPedido(
-              grupo.pedido,
-              grupo.dataRecebimento,
-            ),
-            dt_conclusao: isoParaDataBR(grupo.dataRecebimento),
-            valor_recebido: String(grupo.valorRecebido),
-            preco_com_rebate: +valorBase.toFixed(2),
-            cupom_rebate: 0,
-            taxa_afiliados: taxaAfiliados,
-            subisidio_pix: 0,
-          },
-          tituloRelacionado: titulo,
-          precoBase,
-        });
+        // Cálculo POR ITEM direto da composição da Shopee: base =
+        // order_discounted_price (original − desconto do vendedor); taxa fixa
+        // por unidade; faixa pela unidade; + afiliados. Sem detalhe, cai no
+        // valor do título do Tiny.
+        const r = calculaLiquidoV2(
+          detalhe?.composicao,
+          valorRecebido,
+          +titulo.conta.valor,
+        );
 
         return {
           id_ecommerce: grupo.pedido,
           sku: "",
-          preco_base: +valorBase.toFixed(2),
+          preco_base: r.base,
           descricao_anuncio: detalhe?.cliente || grupo.cliente || grupo.pedido,
           dt_criacao_pedido: dataCriacaoDoPedido(
             grupo.pedido,
             grupo.dataRecebimento,
           ),
-          valor_recebido: +grupo.valorRecebido.toFixed(2),
+          valor_recebido: valorRecebido,
           valor_titulo: +titulo.conta.valor,
           subisidio_pix: 0,
-          valor_calculado: +taxas.valorCalculado.toFixed(2),
-          valor_taxas: +taxas.valorTaxa.toFixed(2),
-          preco_com_rebate: +valorBase.toFixed(2),
+          valor_calculado: r.liquido,
+          valor_taxas: r.taxa,
+          preco_com_rebate: r.base,
           valor_rebate: 0,
           cupom_rebate: 0,
           historico: titulo.conta.historico,
@@ -331,9 +274,11 @@ export default function TitulosEcommerceV2() {
           data_recebimento: isoParaDataBR(grupo.dataRecebimento),
           documento: titulo.conta.numero_doc,
           id: titulo.conta.id,
-          regra: taxas.regra,
-          taxa_afiliados: taxaAfiliados,
-          houveArredondamento: taxas.houveArredondamento,
+          regra: r.regra,
+          // Negativo apenas para exibição (indica dedução no tooltip/alerta).
+          taxa_afiliados: -r.afiliados,
+          houveArredondamento: r.houveArredondamento,
+          detalheV2: r.detalhe,
         };
       });
 
