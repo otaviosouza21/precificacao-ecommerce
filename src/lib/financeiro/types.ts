@@ -42,6 +42,14 @@ export interface ListarRendaParams {
   valorMax?: number;
 }
 
+// Entrada de uma lista de taxas (comissão/serviço) da composição da Shopee.
+export interface FeeInfoRenda {
+  fee_amount?: number;
+  rule_display_name?: string;
+  rule_id?: number;
+  category?: string;
+}
+
 // Um item (produto) dentro da composição financeira de um pedido.
 export interface ItemComposicaoRenda {
   item_id?: number;
@@ -80,6 +88,11 @@ export interface ComposicaoRenda {
   shopee_shipping_rebate?: number;
   // Comissão de afiliados do pedido.
   order_ams_commission_fee?: number;
+  // Listas de taxas — a "Taxa de Serviço Afiliados do Vendedor" vem aqui.
+  net_service_fee?: number;
+  net_service_fee_info_list?: FeeInfoRenda[];
+  net_commission_fee?: number;
+  net_commission_fee_info_list?: FeeInfoRenda[];
   // Valor líquido que efetivamente entrou.
   escrow_amount?: number;
   [campo: string]: unknown;

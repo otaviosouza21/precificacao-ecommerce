@@ -24,7 +24,11 @@ export interface DetalheTaxasV2 {
   quantidade: number;
   itens: number;
   taxaFixaTotal: number;
-  afiliados: number;
+  // Afiliados: comissão (order_ams_commission_fee) + taxa de serviço de
+  // afiliados (fee_amount de "Taxa de Serviço Afiliados do Vendedor").
+  afiliadosComissao: number;
+  afiliadosServico: number;
+  afiliados: number; // total (comissão + serviço)
   taxaTotal: number;
   liquido: number;
 }
@@ -41,6 +45,27 @@ export interface ResultadoCalculoV2 {
 
 const num = (x: unknown): number =>
   typeof x === "number" && Number.isFinite(x) ? x : 0;
+
+// Soma o fee_amount das entradas de afiliados ("Taxa de Serviço Afiliados do
+// Vendedor") nas listas de taxas da composição. Essa taxa NÃO está no
+// order_ams_commission_fee e precisa ser somada à dedução de afiliados.
+function taxaServicoAfiliados(comp: ComposicaoRenda | undefined): number {
+  if (!comp) return 0;
+  const listas = [
+    comp.net_service_fee_info_list,
+    comp.net_commission_fee_info_list,
+  ];
+  let soma = 0;
+  for (const lista of listas) {
+    if (!Array.isArray(lista)) continue;
+    for (const e of lista) {
+      if (e && /afiliad/i.test(String(e.rule_display_name ?? ""))) {
+        soma += num(e.fee_amount);
+      }
+    }
+  }
+  return +soma.toFixed(2);
+}
 
 export function calculaLiquidoV2(
   comp: ComposicaoRenda | undefined,
@@ -94,7 +119,9 @@ export function calculaLiquidoV2(
     regraRepresentativa = regra;
   }
 
-  const afiliados = Math.abs(num(comp?.order_ams_commission_fee));
+  const afiliadosComissao = Math.abs(num(comp?.order_ams_commission_fee));
+  const afiliadosServico = taxaServicoAfiliados(comp);
+  const afiliados = +(afiliadosComissao + afiliadosServico).toFixed(2);
   base = +base.toFixed(2);
   comissaoValor = +comissaoValor.toFixed(2);
   taxaFixaTotal = +taxaFixaTotal.toFixed(2);
@@ -124,6 +151,8 @@ export function calculaLiquidoV2(
       quantidade,
       itens,
       taxaFixaTotal,
+      afiliadosComissao,
+      afiliadosServico,
       afiliados,
       taxaTotal: taxa,
       liquido,

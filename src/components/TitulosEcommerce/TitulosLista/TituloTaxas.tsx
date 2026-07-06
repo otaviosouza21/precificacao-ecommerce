@@ -66,11 +66,22 @@ export default function TituloTaxas({ item }: { item: ConciliacaoItem }) {
                   </div>
                 </div>
 
-                {d.afiliados > 0 && (
+                {d.afiliadosComissao > 0 && (
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-600">Comissão afiliados:</span>
                     <span className="font-semibold text-red-600">
-                      - {brlConvert(d.afiliados)}
+                      - {brlConvert(d.afiliadosComissao)}
+                    </span>
+                  </div>
+                )}
+
+                {d.afiliadosServico > 0 && (
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600">
+                      Taxa serviço afiliados:
+                    </span>
+                    <span className="font-semibold text-red-600">
+                      - {brlConvert(d.afiliadosServico)}
                     </span>
                   </div>
                 )}
