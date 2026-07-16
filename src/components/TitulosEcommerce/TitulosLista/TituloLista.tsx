@@ -1,4 +1,11 @@
-import { Check, CheckSquare, Square, Plus, AlertCircle } from "lucide-react";
+import {
+  Check,
+  CheckSquare,
+  Square,
+  Plus,
+  AlertCircle,
+  AlertTriangle,
+} from "lucide-react";
 import { ConciliacaoItem } from "../TitulosEcommerce";
 import { baixarTituloTiny } from "@/actions/baixaTituloTiny";
 import { toast } from "react-toastify";
@@ -148,6 +155,9 @@ export default function TituloLista({
     }
   };
 
+  // Só a v2 preenche precoRef → coluna de referência aparece apenas nela.
+  const temRef = recebidosConciliados.some((i) => i.precoRef !== undefined);
+
   const isAllSelected =
     selectedItems.size === recebidosConciliados.length &&
     recebidosConciliados.length > 0;
@@ -224,6 +234,17 @@ export default function TituloLista({
                     </span>
                   </div>
                 </th>
+
+                {temRef && (
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                    <div className="flex flex-col">
+                      <span>Vendido</span>
+                      <span className="text-indigo-500 font-bold text-xs">
+                        Shopee
+                      </span>
+                    </div>
+                  </th>
+                )}
 
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   <div className="flex flex-col">
@@ -343,6 +364,38 @@ export default function TituloLista({
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-700">
                       {formatCurrency(item.preco_base)}
                     </td>
+
+                    {temRef && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                        {item.precoRef != null ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <span
+                              className={
+                                item.divergeRef
+                                  ? "font-semibold text-amber-700"
+                                  : "text-indigo-700"
+                              }
+                            >
+                              {formatCurrency(item.precoRef)}
+                            </span>
+                            {item.divergeRef && (
+                              <span
+                                className="text-amber-500 cursor-help"
+                                title={`Venda na Shopee ${formatCurrency(
+                                  item.precoRef,
+                                )} diferente da referência ${formatCurrency(
+                                  item.preco_base,
+                                )}`}
+                              >
+                                <AlertTriangle className="h-4 w-4" />
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                    )}
 
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                       {formatCurrency(item.valor_titulo)}

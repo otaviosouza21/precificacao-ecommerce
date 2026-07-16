@@ -34,6 +34,11 @@ export type ConciliacaoItem = {
   subisidio_pix: number;
   // Detalhamento por item (só a v2 preenche; usado no tooltip de taxas).
   detalheV2?: DetalheTaxasV2;
+  // Preço base de referência (anúncio Shopee no nosso banco). Só a v2 preenche.
+  // `null` = algum SKU do pedido sem preço cadastrado.
+  precoRef?: number | null;
+  // true quando o preço de referência diverge do preço base usado no cálculo.
+  divergeRef?: boolean;
 };
 
 export default function TitulosEcommerce() {
