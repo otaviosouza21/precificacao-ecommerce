@@ -54,6 +54,7 @@ export interface FeeInfoRenda {
 export interface ItemComposicaoRenda {
   item_id?: number;
   item_sku?: string;
+  model_sku?: string;
   item_name?: string;
   // Preço original do anúncio (= price_info.original_price). Base de cálculo.
   original_price?: number;

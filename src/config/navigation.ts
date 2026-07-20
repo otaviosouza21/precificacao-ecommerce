@@ -5,6 +5,7 @@ import {
   MessageCircle,
   RefreshCw,
   ShoppingCart,
+  Tags,
   UserCog,
   Users,
   type LucideIcon,
@@ -54,6 +55,13 @@ export const navigation: NavSection[] = [
         icon: ShoppingCart,
         status: "active",
         description: "Conciliação direto pela API da Shopee (sem planilha).",
+      },
+      {
+        label: "Gestão de Preços",
+        href: "/anuncios",
+        icon: Tags,
+        status: "active",
+        description: "Preços dos anúncios Shopee × referência interna.",
       },
       {
         label: "Relatório de Custos",

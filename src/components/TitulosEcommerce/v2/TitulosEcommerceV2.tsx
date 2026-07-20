@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { buscarTitulosAbertosV2 } from "@/actions/buscarTitulosAbertosV2";
 import { TitulosReceberApiTiny } from "@/api/types/api-types";
@@ -10,6 +11,11 @@ import {
   listarRenda,
   type LancamentoRenda,
 } from "@/lib/financeiro";
+import { toast } from "react-toastify";
+import {
+  listarPrecosAnuncios,
+  sincronizarPrecosAnuncios,
+} from "@/lib/anuncios";
 import TituloLista from "../TitulosLista/TituloLista";
 import { ConciliacaoItem } from "../TitulosEcommerce";
 import PeriodoRendaForm from "./PeriodoRendaForm";
@@ -119,6 +125,28 @@ export default function TitulosEcommerceV2() {
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [atualizar, setAtualizar] = useState(false);
+  const [isSincronizando, setIsSincronizando] = useState(false);
+
+  // Atualiza os preços base (anúncios Shopee → nosso banco) sob demanda.
+  async function sincronizarPrecos() {
+    if (!token) {
+      setError("Não autenticado — refaça o login.");
+      return;
+    }
+    setIsSincronizando(true);
+    try {
+      const { total } = await sincronizarPrecosAnuncios(token);
+      toast.success(
+        `Preços base atualizados: ${total} anúncios.` +
+          (recebidosConciliados ? " Clique em Buscar renda para aplicar." : ""),
+      );
+    } catch (err) {
+      console.error("Erro ao sincronizar preços dos anúncios:", err);
+      toast.error("Não foi possível atualizar os preços base.");
+    } finally {
+      setIsSincronizando(false);
+    }
+  }
 
   // Títulos em aberto no Tiny — base para casar e baixar (igual à v1).
   useEffect(() => {
@@ -215,19 +243,37 @@ export default function TitulosEcommerceV2() {
         return;
       }
 
-      // 3) Detalhe financeiro de cada pedido (preço base vem da Shopee, não
-      //    mais do Tiny). Concorrência limitada + progresso.
+      // 3) Detalhe financeiro de cada pedido (Shopee) + preços de referência
+      //    (nosso banco), em PARALELO — o preço fica escondido atrás da janela
+      //    das chamadas de detalhe.
       setIsDetalhando(true);
       setProgresso({ feito: 0, total: pares.length });
-      const { detalhes, falhas } = await detalharVariosPedidos(
-        token,
-        pares.map((p) => p.grupo.pedido),
-        {
-          onProgress: (feito, total) => {
-            if (!cancelado) setProgresso({ feito, total });
+      const [{ detalhes, falhas }, precosRef] = await Promise.all([
+        detalharVariosPedidos(
+          token,
+          pares.map((p) => p.grupo.pedido),
+          {
+            onProgress: (feito, total) => {
+              if (!cancelado) setProgresso({ feito, total });
+            },
           },
-        },
-      );
+        ),
+        listarPrecosAnuncios(token)
+          .then((resp) => {
+            const mapa = new Map<string, number>();
+            for (const p of resp.itens) {
+              const preco = p.precoAtual ?? p.precoOriginal;
+              if (p.sku && preco != null) {
+                mapa.set(p.sku.trim().toUpperCase(), preco);
+              }
+            }
+            return mapa;
+          })
+          .catch((err) => {
+            console.error("Erro ao carregar preços de referência:", err);
+            return new Map<string, number>();
+          }),
+      ]);
       if (cancelado) return;
       setIsDetalhando(false);
 
@@ -242,20 +288,29 @@ export default function TitulosEcommerceV2() {
         const detalhe = detalhes.get(grupo.pedido);
         const valorRecebido = +grupo.valorRecebido.toFixed(2);
 
-        // Cálculo POR ITEM direto da composição da Shopee: base =
-        // order_discounted_price (original − desconto do vendedor); taxa fixa
-        // por unidade; faixa pela unidade; + afiliados. Sem detalhe, cai no
-        // valor do título do Tiny.
+        // Cálculo POR ITEM: base = PREÇO DE REFERÊNCIA do nosso banco (por
+        // SKU/variação × qtd); fallback para o vendido na Shopee quando o SKU
+        // não tem referência. Taxa fixa por unidade; faixa pela unidade;
+        // + afiliados. Sem detalhe, cai no valor do título do Tiny.
         const r = calculaLiquidoV2(
           detalhe?.composicao,
           valorRecebido,
           +titulo.conta.valor,
+          precosRef,
         );
+
+        // Coluna de comparação: preço vendido na Shopee × base (referência).
+        // Alerta quando a venda diferiu da referência (e a referência foi usada).
+        const precoRef = r.baseShopee;
+        const divergeRef =
+          r.usouReferencia && Math.abs(r.baseShopee - r.base) >= 0.01;
 
         return {
           id_ecommerce: grupo.pedido,
           sku: "",
           preco_base: r.base,
+          precoRef,
+          divergeRef,
           descricao_anuncio: detalhe?.cliente || grupo.cliente || grupo.pedido,
           dt_criacao_pedido: dataCriacaoDoPedido(
             grupo.pedido,
@@ -308,6 +363,18 @@ export default function TitulosEcommerceV2() {
         <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-300 ring-1 ring-emerald-400/40">
           V2 · API Shopee
         </span>
+        <button
+          type="button"
+          onClick={sincronizarPrecos}
+          disabled={isSincronizando}
+          title="Atualiza os preços base (anúncios Shopee → nosso banco)"
+          className="ml-auto flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <RefreshCw
+            className={`h-4 w-4 ${isSincronizando ? "animate-spin" : ""}`}
+          />
+          {isSincronizando ? "Atualizando..." : "Atualizar preços base"}
+        </button>
       </div>
 
       <PeriodoRendaForm
@@ -390,7 +457,7 @@ export default function TitulosEcommerceV2() {
             setAtualizar={setAtualizar}
             recebidosConciliados={recebidosConciliados}
             baseLabel="Preço Base"
-            baseSublabel="Shopee"
+            baseSublabel="Referência"
           />
         </div>
       )}
