@@ -5,11 +5,19 @@ import {
   Plus,
   AlertCircle,
   AlertTriangle,
+  Inbox,
 } from "lucide-react";
 import { ConciliacaoItem } from "../TitulosEcommerce";
 import { baixarTituloTiny } from "@/actions/baixaTituloTiny";
 import { toast } from "react-toastify";
-import { Dispatch, SetStateAction, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  memo,
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
 import { formatCurrency, formatDate } from "../functions/formataDados";
 import BaixaButton from "@/components/Ui/Forms/BaixaButton";
 import { CopyButton } from "@/components/Ui/CopyButton";
@@ -25,9 +33,24 @@ type TituloListaProps = {
   baseSublabel?: string;
 };
 
+// Payload compartilhado entre a baixa individual e a baixa em lote.
+function montaPayloadBaixa(item: ConciliacaoItem) {
+  return {
+    id: item.id,
+    data_recebimento: item.data_recebimento,
+    categoria: "Venda Shopee",
+    historico: "",
+    valorPago: item.valor_recebido,
+    contaDestino: "Caixa",
+    valorAcrescimo: 0,
+    valorDesconto: 0,
+    valorJuros: 0,
+    valorTaxas: item.valor_taxas,
+  };
+}
+
 export default function TituloLista({
   recebidosConciliados,
-  atualizar,
   setAtualizar,
   baseLabel = "Tabela Tiny",
   baseSublabel = "Base",
@@ -38,69 +61,62 @@ export default function TituloLista({
     new Set(),
   );
 
-  const baixaTitulo = (titulo: ConciliacaoItem, index: number) => {
-    if (titulo.valor_calculado !== titulo.valor_recebido) {
-      toast.error(
-        "O valor recebido é diferente do valor calculado, não é possivel baixar o título",
-      );
-      return;
-    }
+  const total = recebidosConciliados.length;
 
-    async function baixar() {
+  const baixaTitulo = useCallback(
+    (titulo: ConciliacaoItem, index: number) => {
+      if (titulo.valor_calculado !== titulo.valor_recebido) {
+        toast.error(
+          "O valor recebido é diferente do valor calculado, não é possivel baixar o título",
+        );
+        return;
+      }
+
       const itemId = `${titulo.id}-${index}`;
       setProcessingItems((prev) => new Set(prev).add(itemId));
 
-      const retorno = await baixarTituloTiny({
-        id: titulo.id,
-        data_recebimento: titulo.data_recebimento,
-        categoria: "Venda Shopee",
-        historico: "",
-        valorPago: titulo.valor_recebido,
-        contaDestino: "Caixa",
-        valorAcrescimo: 0,
-        valorDesconto: 0,
-        valorJuros: 0,
-        valorTaxas: titulo.valor_taxas,
-      });
+      baixarTituloTiny(montaPayloadBaixa(titulo))
+        .then((retorno) => {
+          if (retorno.success) {
+            setAtualizar((prev) => !prev);
+            toast.success(retorno.message);
+          } else {
+            toast.error("Não foi possivel baixar titulo");
+          }
+        })
+        .catch(() => toast.error("Não foi possivel baixar titulo"))
+        .finally(() => {
+          setProcessingItems((prev) => {
+            const next = new Set(prev);
+            next.delete(itemId);
+            return next;
+          });
+        });
+    },
+    [setAtualizar],
+  );
 
-      setProcessingItems((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(itemId);
-        return newSet;
-      });
-
-      if (retorno.success) {
-        setAtualizar(!atualizar);
-        toast.success(retorno.message);
+  const handleSelectItem = useCallback((itemId: string) => {
+    setSelectedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
       } else {
-        toast.error("Não foi possivel baixar titulo");
+        next.add(itemId);
       }
-    }
-    baixar();
-  };
+      return next;
+    });
+  }, []);
 
-  const handleSelectItem = (itemId: string) => {
-    const newSelected = new Set(selectedItems);
-    if (newSelected.has(itemId)) {
-      newSelected.delete(itemId);
-    } else {
-      newSelected.add(itemId);
-    }
-    setSelectedItems(newSelected);
-  };
+  const handleSelectAll = useCallback(() => {
+    setSelectedItems((prev) =>
+      prev.size === total
+        ? new Set()
+        : new Set(recebidosConciliados.map((item, idx) => `${item.id}-${idx}`)),
+    );
+  }, [recebidosConciliados, total]);
 
-  const handleSelectAll = () => {
-    if (selectedItems.size === recebidosConciliados.length) {
-      setSelectedItems(new Set());
-    } else {
-      const allIds = new Set(
-        recebidosConciliados.map((item, idx) => `${item.id}-${idx}`),
-      );
-      setSelectedItems(allIds);
-    }
-  };
-
-  const handleBaixarSelecionados = async () => {
+  const handleBaixarSelecionados = useCallback(async () => {
     if (selectedItems.size === 0) {
       toast.warning("Selecione pelo menos um item");
       return;
@@ -110,42 +126,22 @@ export default function TituloLista({
     let sucessos = 0;
     let erros = 0;
 
-    for (const selectedId of selectedItems) {
-      const [idStr, idxStr] = selectedId.split("-");
-      const idx = parseInt(idxStr);
+    for (let idx = 0; idx < recebidosConciliados.length; idx++) {
       const item = recebidosConciliados[idx];
-      console.log(idStr);
+      if (!selectedItems.has(`${item.id}-${idx}`)) continue;
 
-      if (item) {
-        try {
-          const retorno = await baixarTituloTiny({
-            id: item.id,
-            data_recebimento: item.data_recebimento,
-            categoria: "Venda Shopee",
-            historico: "",
-            valorPago: item.valor_recebido,
-            contaDestino: "Caixa",
-            valorAcrescimo: 0,
-            valorDesconto: 0,
-            valorJuros: 0,
-            valorTaxas: item.valor_taxas,
-          });
-
-          if (retorno.success) {
-            sucessos++;
-          } else {
-            erros++;
-          }
-        } catch (error) {
-          console.log(error);
-          erros++;
-        }
+      try {
+        const retorno = await baixarTituloTiny(montaPayloadBaixa(item));
+        if (retorno.success) sucessos++;
+        else erros++;
+      } catch {
+        erros++;
       }
     }
 
     setIsProcessing(false);
     setSelectedItems(new Set());
-    setAtualizar(!atualizar);
+    setAtualizar((prev) => !prev);
 
     if (sucessos > 0) {
       toast.success(`${sucessos} título(s) baixado(s) com sucesso`);
@@ -153,25 +149,25 @@ export default function TituloLista({
     if (erros > 0) {
       toast.error(`${erros} título(s) falharam ao baixar`);
     }
-  };
+  }, [recebidosConciliados, selectedItems, setAtualizar]);
 
   // Só a v2 preenche precoRef → coluna de referência aparece apenas nela.
-  const temRef = recebidosConciliados.some((i) => i.precoRef !== undefined);
+  const temRef = useMemo(
+    () => recebidosConciliados.some((i) => i.precoRef !== undefined),
+    [recebidosConciliados],
+  );
 
-  const isAllSelected =
-    selectedItems.size === recebidosConciliados.length &&
-    recebidosConciliados.length > 0;
-  const isSomeSelected =
-    selectedItems.size > 0 && selectedItems.size < recebidosConciliados.length;
+  const isAllSelected = selectedItems.size === total && total > 0;
+  const isSomeSelected = selectedItems.size > 0 && selectedItems.size < total;
 
   return (
     <div className="space-y-4 w-full">
       {/* Header com ações em lote */}
-      <div className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-xl border border-slate-200">
         <div className="flex items-center gap-3">
           <button
             onClick={handleSelectAll}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 rounded-lg hover:text-slate-900 hover:bg-white/70 transition-colors"
           >
             {isAllSelected ? (
               <CheckSquare className="h-4 w-4 text-blue-600" />
@@ -185,7 +181,7 @@ export default function TituloLista({
 
           {selectedItems.size > 0 && (
             <span className="text-sm text-slate-600">
-              {selectedItems.size} de {recebidosConciliados.length} selecionados
+              {selectedItems.size} de {total} selecionados
             </span>
           )}
         </div>
@@ -205,12 +201,12 @@ export default function TituloLista({
       </div>
 
       {/* Tabela */}
-      <div className="overflow-hidden bg-white rounded-xl shadow-sm border border-slate-200">
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="overflow-x-auto rounded-xl">
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-gradient-to-r from-slate-50 to-slate-100">
-              <tr className="">
-                <th className="px-6 py-4  text-left">
+              <tr>
+                <th className="px-6 py-4 text-left">
                   <span className="sr-only">Seleção</span>
                 </th>
                 <th className="px-4 py-4 text-left">
@@ -225,7 +221,6 @@ export default function TituloLista({
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Status
                 </th>
-
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   <div className="flex flex-col">
                     <span>{baseLabel}</span>
@@ -257,11 +252,9 @@ export default function TituloLista({
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Taxa Afiliados
                 </th>
-
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Valor Calculado
                 </th>
-
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   <div className="flex flex-col">
                     <span>Recebido</span>
@@ -273,154 +266,32 @@ export default function TituloLista({
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Data Recebido
                 </th>
-
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-100">
               {recebidosConciliados.map((item, idx) => {
                 const itemId = `${item.id}-${idx}`;
-                const isSelected = selectedItems.has(itemId);
-                const isItemProcessing = processingItems.has(itemId);
-                const valorDiferenca = Math.abs(
-                  item.valor_recebido - item.valor_calculado,
-                );
-                const isValorCompativel = valorDiferenca === 0;
-
                 return (
-                  <tr
+                  <TituloRow
                     key={itemId}
-                    className={`transition-all duration-200 hover:bg-blue-100 ${isSelected
-                      ? "bg-blue-200 ring-2 ring-blue-200 ring-inset"
-                      : ""
-                      }`}
-                  >
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => handleSelectItem(itemId)}
-                        className="p-0 hover:bg-slate-100 rounded transition-colors"
-                      >
-                        {isSelected ? (
-                          <CheckSquare className="h-4 w-4 text-blue-600" />
-                        ) : (
-                          <Square className="h-4 w-4 text-slate-400 hover:text-slate-600" />
-                        )}
-                      </button>
-                    </td>
-                    <td className="px-2 flex gap-2 items-center py-4 whitespace-nowrap">
-                      <BaixaButton
-                        processing={isItemProcessing}
-                        onClick={() => baixaTitulo(item, idx)}
-                        icon={Check}
-                        iconSize={12}
-                        textDefault="Baixar"
-                        textProcessing="Baixando..."
-                        className="bg-blue-700 text-xs"
-                      />
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">
-                      {formatDate(item.dt_criacao_pedido)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                      {item.id_ecommerce}
-                      <CopyButton text={item.id_ecommerce} />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${isValorCompativel
-                          ? "bg-green-100 text-green-800 ring-1 ring-green-600/20"
-                          : "bg-amber-100 text-amber-800 ring-1 ring-amber-600/20"
-                          }`}
-                      >
-                        {isValorCompativel ? (
-                          <>
-                            <Check className="h-3 w-3 mr-1" />
-                            OK
-                          </>
-                        ) : (
-                          "Divergente"
-                        )}
-                      </span>
-                      {(Number(item.taxa_afiliados) !== 0 ||
-                        item.houveArredondamento) && (
-                          <div
-                            className="ml-2 text-red-500 cursor-help"
-                            title={
-                              Number(item.taxa_afiliados) !== 0 &&
-                                item.houveArredondamento
-                                ? "Possui taxa de afiliados e arredondamento de 0,01"
-                                : Number(item.taxa_afiliados) !== 0
-                                  ? "Possui taxa de afiliados"
-                                  : "Possui arredondamento de 0,01"
-                            }
-                          >
-                            <AlertCircle className="h-4 w-4" />
-                          </div>
-                        )}
-                    </td>
-
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-700">
-                      {formatCurrency(item.preco_base)}
-                    </td>
-
-                    {temRef && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                        {item.precoRef != null ? (
-                          <span className="inline-flex items-center gap-1.5">
-                            <span
-                              className={
-                                item.divergeRef
-                                  ? "font-semibold text-amber-700"
-                                  : "text-indigo-700"
-                              }
-                            >
-                              {formatCurrency(item.precoRef)}
-                            </span>
-                            {item.divergeRef && (
-                              <span
-                                className="text-amber-500 cursor-help"
-                                title={`Venda na Shopee ${formatCurrency(
-                                  item.precoRef,
-                                )} diferente da referência ${formatCurrency(
-                                  item.preco_base,
-                                )}`}
-                              >
-                                <AlertTriangle className="h-4 w-4" />
-                              </span>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-                    )}
-
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                      {formatCurrency(item.valor_titulo)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                      {item.taxa_afiliados ? formatCurrency(item.taxa_afiliados) : '-'}
-                    </td>
-                    <td className="px-6 py-4 flex gap-1 whitespace-nowrap text-sm font-medium text-slate-900">
-                      {formatCurrency(item.valor_calculado)}
-                      <TituloTaxas item={item} />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                      {formatCurrency(item.valor_recebido)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                      {formatDate(item.data_recebimento)}
-                    </td>
-
-                  </tr>
+                    item={item}
+                    index={idx}
+                    itemId={itemId}
+                    temRef={temRef}
+                    isSelected={selectedItems.has(itemId)}
+                    isProcessing={processingItems.has(itemId)}
+                    onSelect={handleSelectItem}
+                    onBaixar={baixaTitulo}
+                  />
                 );
               })}
             </tbody>
           </table>
         </div>
 
-        {recebidosConciliados.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-slate-400 text-lg mb-2">📋</div>
+        {total === 0 && (
+          <div className="flex flex-col items-center text-center py-12">
+            <Inbox className="h-10 w-10 text-slate-300 mb-3" />
             <h3 className="text-sm font-medium text-slate-900">
               Nenhum título encontrado
             </h3>
@@ -433,3 +304,158 @@ export default function TituloLista({
     </div>
   );
 }
+
+type TituloRowProps = {
+  item: ConciliacaoItem;
+  index: number;
+  itemId: string;
+  temRef: boolean;
+  isSelected: boolean;
+  isProcessing: boolean;
+  onSelect: (itemId: string) => void;
+  onBaixar: (item: ConciliacaoItem, index: number) => void;
+};
+
+const TituloRow = memo(function TituloRow({
+  item,
+  index,
+  itemId,
+  temRef,
+  isSelected,
+  isProcessing,
+  onSelect,
+  onBaixar,
+}: TituloRowProps) {
+  const isValorCompativel = item.valor_recebido === item.valor_calculado;
+  const temTaxaAfiliados = Number(item.taxa_afiliados) !== 0;
+  const temAlerta = temTaxaAfiliados || item.houveArredondamento;
+
+  return (
+    <tr
+      className={`transition-colors duration-150 hover:bg-blue-50 ${
+        isSelected ? "bg-blue-100 ring-2 ring-blue-200 ring-inset" : ""
+      }`}
+    >
+      <td className="px-4 py-4 whitespace-nowrap">
+        <button
+          onClick={() => onSelect(itemId)}
+          className="p-0 hover:bg-slate-100 rounded transition-colors"
+          aria-label={isSelected ? "Desmarcar título" : "Selecionar título"}
+        >
+          {isSelected ? (
+            <CheckSquare className="h-4 w-4 text-blue-600" />
+          ) : (
+            <Square className="h-4 w-4 text-slate-400 hover:text-slate-600" />
+          )}
+        </button>
+      </td>
+      <td className="px-2 flex gap-2 items-center py-4 whitespace-nowrap">
+        <BaixaButton
+          processing={isProcessing}
+          onClick={() => onBaixar(item, index)}
+          icon={Check}
+          iconSize={12}
+          textDefault="Baixar"
+          textProcessing="Baixando..."
+          className="bg-blue-700 text-xs"
+        />
+      </td>
+      <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">
+        {formatDate(item.dt_criacao_pedido)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+        {item.id_ecommerce}
+        <CopyButton text={item.id_ecommerce} />
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center">
+          <span
+            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
+              isValorCompativel
+                ? "bg-green-100 text-green-800 ring-1 ring-green-600/20"
+                : "bg-amber-100 text-amber-800 ring-1 ring-amber-600/20"
+            }`}
+          >
+            {isValorCompativel ? (
+              <>
+                <Check className="h-3 w-3 mr-1" />
+                OK
+              </>
+            ) : (
+              "Divergente"
+            )}
+          </span>
+          {temAlerta && (
+            <div
+              className="ml-2 text-red-500 cursor-help"
+              title={
+                temTaxaAfiliados && item.houveArredondamento
+                  ? "Possui taxa de afiliados e arredondamento de 0,01"
+                  : temTaxaAfiliados
+                    ? "Possui taxa de afiliados"
+                    : "Possui arredondamento de 0,01"
+              }
+            >
+              <AlertCircle className="h-4 w-4" />
+            </div>
+          )}
+        </div>
+      </td>
+
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-700">
+        {formatCurrency(item.preco_base)}
+      </td>
+
+      {temRef && (
+        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+          {item.precoRef != null ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                className={
+                  item.divergeRef
+                    ? "font-semibold text-amber-700"
+                    : "text-indigo-700"
+                }
+              >
+                {formatCurrency(item.precoRef)}
+              </span>
+              {item.divergeRef && (
+                <span
+                  className="text-amber-500 cursor-help"
+                  title={`Venda na Shopee ${formatCurrency(
+                    item.precoRef,
+                  )} diferente da referência ${formatCurrency(
+                    item.preco_base,
+                  )}`}
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                </span>
+              )}
+            </span>
+          ) : (
+            <span className="text-slate-400">—</span>
+          )}
+        </td>
+      )}
+
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+        {formatCurrency(item.valor_titulo)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+        {item.taxa_afiliados ? formatCurrency(item.taxa_afiliados) : "-"}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+        <div className="flex gap-1 items-center">
+          {formatCurrency(item.valor_calculado)}
+          <TituloTaxas item={item} />
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+        {formatCurrency(item.valor_recebido)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+        {formatDate(item.data_recebimento)}
+      </td>
+    </tr>
+  );
+});
