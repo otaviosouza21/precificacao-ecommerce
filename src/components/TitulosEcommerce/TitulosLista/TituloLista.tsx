@@ -213,10 +213,10 @@ export default function TituloLista({
                 <th className="px-6 py-4  text-left">
                   <span className="sr-only">Seleção</span>
                 </th>
-                <th className="px-6 py-4 text-left">
+                <th className="px-4 py-4 text-left">
                   <span className="sr-only">Ações</span>
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Criação Pedido
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
@@ -255,8 +255,9 @@ export default function TituloLista({
                   </div>
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Taxas
+                  Taxa Afiliados
                 </th>
+
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Valor Calculado
                 </th>
@@ -272,9 +273,7 @@ export default function TituloLista({
                 <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                   Data Recebido
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                  Documento
-                </th>
+
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-100">
@@ -290,11 +289,10 @@ export default function TituloLista({
                 return (
                   <tr
                     key={itemId}
-                    className={`transition-all duration-200 hover:bg-blue-100 ${
-                      isSelected
-                        ? "bg-blue-200 ring-2 ring-blue-200 ring-inset"
-                        : ""
-                    }`}
+                    className={`transition-all duration-200 hover:bg-blue-100 ${isSelected
+                      ? "bg-blue-200 ring-2 ring-blue-200 ring-inset"
+                      : ""
+                      }`}
                   >
                     <td className="px-4 py-4 whitespace-nowrap">
                       <button
@@ -313,13 +311,13 @@ export default function TituloLista({
                         processing={isItemProcessing}
                         onClick={() => baixaTitulo(item, idx)}
                         icon={Check}
-                        iconSize={15}
+                        iconSize={12}
                         textDefault="Baixar"
                         textProcessing="Baixando..."
-                        className="bg-blue-700 text-sm"
+                        className="bg-blue-700 text-xs"
                       />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">
                       {formatDate(item.dt_criacao_pedido)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
@@ -328,11 +326,10 @@ export default function TituloLista({
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
-                          isValorCompativel
-                            ? "bg-green-100 text-green-800 ring-1 ring-green-600/20"
-                            : "bg-amber-100 text-amber-800 ring-1 ring-amber-600/20"
-                        }`}
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${isValorCompativel
+                          ? "bg-green-100 text-green-800 ring-1 ring-green-600/20"
+                          : "bg-amber-100 text-amber-800 ring-1 ring-amber-600/20"
+                          }`}
                       >
                         {isValorCompativel ? (
                           <>
@@ -345,20 +342,20 @@ export default function TituloLista({
                       </span>
                       {(Number(item.taxa_afiliados) !== 0 ||
                         item.houveArredondamento) && (
-                        <div
-                          className="ml-2 text-red-500 cursor-help"
-                          title={
-                            Number(item.taxa_afiliados) !== 0 &&
-                            item.houveArredondamento
-                              ? "Possui taxa de afiliados e arredondamento de 0,01"
-                              : Number(item.taxa_afiliados) !== 0
-                                ? "Possui taxa de afiliados"
-                                : "Possui arredondamento de 0,01"
-                          }
-                        >
-                          <AlertCircle className="h-4 w-4" />
-                        </div>
-                      )}
+                          <div
+                            className="ml-2 text-red-500 cursor-help"
+                            title={
+                              Number(item.taxa_afiliados) !== 0 &&
+                                item.houveArredondamento
+                                ? "Possui taxa de afiliados e arredondamento de 0,01"
+                                : Number(item.taxa_afiliados) !== 0
+                                  ? "Possui taxa de afiliados"
+                                  : "Possui arredondamento de 0,01"
+                            }
+                          >
+                            <AlertCircle className="h-4 w-4" />
+                          </div>
+                        )}
                     </td>
 
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-700">
@@ -400,8 +397,8 @@ export default function TituloLista({
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                       {formatCurrency(item.valor_titulo)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                      {formatCurrency(item.valor_taxas)}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                      {item.taxa_afiliados ? formatCurrency(item.taxa_afiliados) : '-'}
                     </td>
                     <td className="px-6 py-4 flex gap-1 whitespace-nowrap text-sm font-medium text-slate-900">
                       {formatCurrency(item.valor_calculado)}
@@ -413,9 +410,7 @@ export default function TituloLista({
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
                       {formatDate(item.data_recebimento)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                      {item.documento?.split("/", 1) || "-"}
-                    </td>
+
                   </tr>
                 );
               })}

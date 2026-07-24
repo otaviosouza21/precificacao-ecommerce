@@ -13,7 +13,7 @@ export default function BaixaButton({
   textDefault,
   textProcessing = "Processando...",
   className,
-  iconSize = 20,
+  iconSize = 10,
   processing = false,
   ...props
 }: primaryButtonProps) {
@@ -21,7 +21,7 @@ export default function BaixaButton({
   return (
     <button
       className={twMerge(
-        `py-2 px-3 rounded-lg max-lg:text-sm flex items-center justify-center gap-2 font-medium 
+        `py-2 px-3 rounded-lg max-lg:text-sm flex items-center justify-center gap-1 font-medium 
          active:scale-95 transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`,
         className
       )}

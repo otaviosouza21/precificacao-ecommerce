@@ -18,7 +18,7 @@ export default function TituloTaxas({ item }: { item: ConciliacaoItem }) {
         className="text-blue-500 hover:text-blue-600 size-4 cursor-pointer transition-colors"
       />
       {exibeTaxas && (
-        <div className="absolute left-8 top-1/2 -translate-y-1/2 z-50 w-72 animate-in fade-in slide-in-from-left-2 duration-200">
+        <div className="absolute z-999 left-8 top-1/2 -translate-y-1/2  w-72 animate-in fade-in slide-in-from-left-2 duration-200">
           <div className="bg-white border border-gray-200 rounded-lg shadow-xl p-4 space-y-2">
             <h4 className="text-sm font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200">
               Detalhamento de Taxas
@@ -123,7 +123,7 @@ export default function TituloTaxas({ item }: { item: ConciliacaoItem }) {
                     -{" "}
                     {brlConvert(
                       item.regra.perc_comissao_shopee *
-                        (item.valor_titulo + item.subisidio_pix),
+                      (item.valor_titulo + item.subisidio_pix),
                     )}
                   </span>
                 </div>
