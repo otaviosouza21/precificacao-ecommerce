@@ -1,6 +1,7 @@
 import {
   Activity,
   Building2,
+  BarChart3,
   DollarSign,
   MessageCircle,
   RefreshCw,
@@ -62,6 +63,15 @@ export const navigation: NavSection[] = [
         icon: Tags,
         status: "active",
         description: "Preços dos anúncios Shopee × referência interna.",
+      },
+      {
+        label: "Vendas x Custo",
+        href: "/relatorios/vendas-custos",
+        icon: BarChart3,
+        status: "active",
+        description:
+          "Quantidade vendida na Shopee x custo médio do Tiny, por SKU.",
+        quickAccess: true,
       },
       {
         label: "Relatório de Custos",
