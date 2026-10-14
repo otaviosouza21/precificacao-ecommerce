@@ -58,6 +58,14 @@ export const navigation: NavSection[] = [
         description: "Conciliação direto pela API da Shopee (sem planilha).",
       },
       {
+        label: "Títulos Mercado Livre",
+        href: "/titulos-ecommerce/mercado-livre",
+        icon: ShoppingCart,
+        status: "wip",
+        description:
+          "Conciliação de recebimentos Mercado Livre × Tiny (somente conferência).",
+      },
+      {
         label: "Gestão de Preços",
         href: "/anuncios",
         icon: Tags,
