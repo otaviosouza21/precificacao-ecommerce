@@ -1,10 +1,7 @@
-export type FaixaComissao = {
-  id: string;
-  precoMin: number;
-  precoMax: number | null;
-  comissaoPct: number;
-  taxaFixa: number;
-};
+import type { FaixaComissao } from "@/lib/taxasShopee";
+
+// A faixa é a mesma da tabela "Taxas Shopee" (compartilhada com a baixa V2).
+export type { FaixaComissao };
 
 export type Marketplace = {
   id: string;

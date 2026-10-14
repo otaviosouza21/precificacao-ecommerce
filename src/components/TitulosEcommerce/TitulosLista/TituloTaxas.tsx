@@ -102,7 +102,9 @@ export default function TituloTaxas({ item }: { item: ConciliacaoItem }) {
                     <span className="text-gray-600">
                       Comissão
                       {d.comissaoPerc != null
-                        ? ` (${(d.comissaoPerc * 100).toFixed(0)}%)`
+                        ? ` (${(d.comissaoPerc * 100).toLocaleString("pt-BR", {
+                            maximumFractionDigits: 2,
+                          })}%)`
                         : ""}
                       :
                     </span>

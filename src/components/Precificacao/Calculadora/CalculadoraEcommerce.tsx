@@ -17,8 +17,7 @@ import { useParametrosCalculadora } from "./useParametrosCalculadora";
 import ValidacaoPrecoCard from "./ValidacaoPrecoCard";
 
 export default function CalculadoraEcommerce() {
-  const { parametros, setParametros, restaurarPadrao } =
-    useParametrosCalculadora();
+  const { parametros, salvarParametros } = useParametrosCalculadora();
 
   const [produto, setProduto] = useState<ProdutoCalculadora | null>(null);
   const [custoOverride, setCustoOverride] = useState<number | null>(null);
@@ -168,8 +167,7 @@ export default function CalculadoraEcommerce() {
         aberto={modalAberto}
         onFechar={() => setModalAberto(false)}
         parametros={parametros}
-        onSalvar={setParametros}
-        onRestaurarPadrao={restaurarPadrao}
+        onSalvar={salvarParametros}
       />
     </div>
   );

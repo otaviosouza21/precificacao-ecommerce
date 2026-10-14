@@ -1,5 +1,10 @@
 import type { ComposicaoRenda } from "@/lib/financeiro";
-import { regraPorValor, type RegraComissao } from "../functions/formataDados";
+import {
+  faixaDoPreco,
+  TAXAS_SHOPEE_PADRAO,
+  type FaixaComissao,
+} from "@/lib/taxasShopee";
+import type { RegraComissao } from "../functions/formataDados";
 
 // Cálculo de taxas da v2 — POR ITEM.
 //
@@ -8,7 +13,7 @@ import { regraPorValor, type RegraComissao } from "../functions/formataDados";
 // referência cadastrada, cai no preço vendido da Shopee
 // (order_discounted_price da composição).
 //
-// Sobre a base:
+// Sobre a base (faixas = tabela "Taxas Shopee", editável e salva no banco):
 //  - a faixa de comissão é definida pelo preço UNITÁRIO;
 //  - a comissão % incide sobre a base da linha;
 //  - a taxa FIXA é cobrada por UNIDADE (× quantidade);
@@ -46,6 +51,18 @@ export interface ResultadoCalculoV2 {
 const num = (x: unknown): number =>
   typeof x === "number" && Number.isFinite(x) ? x : 0;
 
+// Converte a faixa da tabela para o formato de regra exibido na lista/tooltip.
+// Sem faixas (não deveria acontecer — a API exige ao menos uma), usa o padrão.
+function regraPorFaixas(preco: number, faixas: FaixaComissao[]): RegraComissao {
+  const f =
+    faixaDoPreco(preco, faixas) ?? faixaDoPreco(preco, TAXAS_SHOPEE_PADRAO)!;
+  return {
+    perc_comissao_shopee: f.comissaoPct / 100,
+    taxa_fixa_shopee: f.taxaFixa,
+    subsidio_pix: 0,
+  };
+}
+
 // Soma o fee_amount das entradas de afiliados ("Taxa de Serviço Afiliados do
 // Vendedor") nas listas de taxas da composição.
 function taxaServicoAfiliados(comp: ComposicaoRenda | undefined): number {
@@ -71,6 +88,7 @@ export function calculaLiquidoV2(
   valorRecebido: number,
   valorTituloFallback: number,
   precosRef: Map<string, number>,
+  faixas: FaixaComissao[],
 ): ResultadoCalculoV2 {
   let base = 0;
   let baseShopee = 0;
@@ -115,7 +133,7 @@ export function calculaLiquidoV2(
       continue;
     }
 
-    const regra = regraPorValor(precoUnitario);
+    const regra = regraPorFaixas(precoUnitario, faixas);
     comissaoValor += baseLinha * regra.perc_comissao_shopee;
     taxaFixaTotal += regra.taxa_fixa_shopee * qtd;
     base += baseLinha;
@@ -135,7 +153,7 @@ export function calculaLiquidoV2(
       valorTituloFallback;
     baseShopee = base;
     usouFallback = true;
-    const regra = regraPorValor(base);
+    const regra = regraPorFaixas(base, faixas);
     comissaoValor = base * regra.perc_comissao_shopee;
     taxaFixaTotal = regra.taxa_fixa_shopee;
     quantidade = 1;
@@ -170,7 +188,7 @@ export function calculaLiquidoV2(
     taxa,
     liquido,
     afiliados,
-    regra: regraRepresentativa ?? regraPorValor(base),
+    regra: regraRepresentativa ?? regraPorFaixas(base, faixas),
     houveArredondamento,
     detalhe: {
       base,

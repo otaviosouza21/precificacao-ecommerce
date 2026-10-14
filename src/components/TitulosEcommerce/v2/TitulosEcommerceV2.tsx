@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Percent, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { buscarTitulosAbertosV2 } from "@/actions/buscarTitulosAbertosV2";
 import { TitulosReceberApiTiny } from "@/api/types/api-types";
@@ -9,6 +9,7 @@ import {
   detalharVariosPedidos,
   FinanceiroApiError,
   listarRenda,
+  type DetalheRenda,
   type LancamentoRenda,
 } from "@/lib/financeiro";
 import { toast } from "react-toastify";
@@ -16,6 +17,8 @@ import {
   listarPrecosAnuncios,
   sincronizarPrecosAnuncios,
 } from "@/lib/anuncios";
+import { useTaxasShopee, type FaixaComissao } from "@/lib/taxasShopee";
+import ModalTaxasShopee from "@/components/TaxasShopee/ModalTaxasShopee";
 import TituloLista from "../TitulosLista/TituloLista";
 import { ConciliacaoItem } from "../TitulosEcommerce";
 import PeriodoRendaForm from "./PeriodoRendaForm";
@@ -97,8 +100,88 @@ function agrupaPorPedido(itens: LancamentoRenda[]): GrupoRenda[] {
 
 // ---------------------------------------------------------------------------
 
+// Dados brutos da conciliação (renda × título × detalhe Shopee). O cálculo das
+// taxas fica fora daqui para refazer na hora quando a tabela de taxas muda,
+// sem buscar tudo de novo na Shopee.
+type ParConciliado = {
+  grupo: GrupoRenda;
+  titulo: TitulosReceberApiTiny;
+  detalhe: DetalheRenda | undefined;
+};
+
+type DadosConciliacao = {
+  pares: ParConciliado[];
+  precosRef: Map<string, number>;
+};
+
+function montaConciliacao(
+  { grupo, titulo, detalhe }: ParConciliado,
+  precosRef: Map<string, number>,
+  faixas: FaixaComissao[],
+): ConciliacaoItem {
+  const valorRecebido = +grupo.valorRecebido.toFixed(2);
+
+  // Cálculo POR ITEM: base = PREÇO DE REFERÊNCIA do nosso banco (por
+  // SKU/variação × qtd); fallback para o vendido na Shopee quando o SKU
+  // não tem referência. Taxa fixa por unidade; faixa pela unidade (tabela
+  // "Taxas Shopee"); + afiliados. Sem detalhe, cai no valor do título do Tiny.
+  const r = calculaLiquidoV2(
+    detalhe?.composicao,
+    valorRecebido,
+    +titulo.conta.valor,
+    precosRef,
+    faixas,
+  );
+
+  // Coluna de comparação: preço vendido na Shopee × base (referência).
+  // Alerta quando a venda diferiu da referência (e a referência foi usada).
+  const precoRef = r.baseShopee;
+  const divergeRef =
+    r.usouReferencia && Math.abs(r.baseShopee - r.base) >= 0.01;
+
+  return {
+    id_ecommerce: grupo.pedido,
+    sku: "",
+    preco_base: r.base,
+    precoRef,
+    divergeRef,
+    descricao_anuncio: detalhe?.cliente || grupo.cliente || grupo.pedido,
+    dt_criacao_pedido: dataCriacaoDoPedido(
+      grupo.pedido,
+      grupo.dataRecebimento,
+    ),
+    valor_recebido: valorRecebido,
+    valor_titulo: +titulo.conta.valor,
+    subisidio_pix: 0,
+    valor_calculado: r.liquido,
+    valor_taxas: r.taxa,
+    preco_com_rebate: r.base,
+    valor_rebate: 0,
+    cupom_rebate: 0,
+    historico: titulo.conta.historico,
+    cliente: titulo.conta.nome_cliente || grupo.cliente,
+    data_recebimento: isoParaDataBR(grupo.dataRecebimento),
+    documento: titulo.conta.numero_doc,
+    id: titulo.conta.id,
+    regra: r.regra,
+    // Negativo apenas para exibição (indica dedução no tooltip/alerta).
+    taxa_afiliados: -r.afiliados,
+    houveArredondamento: r.houveArredondamento,
+    detalheV2: r.detalhe,
+  };
+}
+
+// ---------------------------------------------------------------------------
+
 export default function TitulosEcommerceV2() {
   const { token } = useAuth();
+  const {
+    taxas,
+    pronto: taxasProntas,
+    erroCarga: erroTaxas,
+    salvar: salvarTaxas,
+  } = useTaxasShopee();
+  const [modalTaxasAberto, setModalTaxasAberto] = useState(false);
 
   const [de, setDe] = useState(() =>
     isoLocal(new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)),
@@ -111,9 +194,17 @@ export default function TitulosEcommerceV2() {
   const [tituloAReceber, setTitulosAReceber] = useState<
     TitulosReceberApiTiny[] | null
   >(null);
-  const [recebidosConciliados, setRecebidosConciliados] = useState<
-    ConciliacaoItem[] | null
-  >(null);
+  const [dadosConciliacao, setDadosConciliacao] =
+    useState<DadosConciliacao | null>(null);
+
+  // Recalcula na hora quando a tabela de taxas muda. Espera a tabela carregar
+  // para nunca mostrar valores calculados com a tabela errada.
+  const recebidosConciliados = useMemo<ConciliacaoItem[] | null>(() => {
+    if (!dadosConciliacao || !taxasProntas) return null;
+    return dadosConciliacao.pares.map((par) =>
+      montaConciliacao(par, dadosConciliacao.precosRef, taxas.faixas),
+    );
+  }, [dadosConciliacao, taxasProntas, taxas.faixas]);
 
   const [isLoadingTitulos, setIsLoadingTitulos] = useState(false);
   const [isBuscandoRenda, setIsBuscandoRenda] = useState(false);
@@ -180,7 +271,7 @@ export default function TitulosEcommerceV2() {
     setIsBuscandoRenda(true);
     setError(null);
     setAviso(null);
-    setRecebidosConciliados(null);
+    setDadosConciliacao(null);
     try {
       const resposta = await listarRenda(token, {
         de,
@@ -204,10 +295,11 @@ export default function TitulosEcommerceV2() {
     }
   }
 
-  // Concilia renda (Shopee) × títulos (Tiny) e calcula as taxas.
+  // Concilia renda (Shopee) × títulos (Tiny). As taxas são calculadas em
+  // `recebidosConciliados` (useMemo), com a tabela "Taxas Shopee" vigente.
   useEffect(() => {
     if (!lancamentos || !tituloAReceber) {
-      setRecebidosConciliados(null);
+      setDadosConciliacao(null);
       return;
     }
 
@@ -221,10 +313,7 @@ export default function TitulosEcommerceV2() {
       const grupos = agrupaPorPedido(itens);
 
       // 2) Casa cada pedido com o título do Tiny (pelo histórico).
-      const pares: {
-        grupo: GrupoRenda;
-        titulo: TitulosReceberApiTiny;
-      }[] = [];
+      const pares: Omit<ParConciliado, "detalhe">[] = [];
       const idsUsados = new Set<string>();
       for (const grupo of grupos) {
         const titulo = titulos.find(
@@ -239,7 +328,9 @@ export default function TitulosEcommerceV2() {
       }
 
       if (pares.length === 0) {
-        if (!cancelado) setRecebidosConciliados([]);
+        if (!cancelado) {
+          setDadosConciliacao({ pares: [], precosRef: new Map() });
+        }
         return;
       }
 
@@ -283,61 +374,14 @@ export default function TitulosEcommerceV2() {
         );
       }
 
-      // 4) Monta a conciliação no mesmo formato da v1.
-      const conciliados: ConciliacaoItem[] = pares.map(({ grupo, titulo }) => {
-        const detalhe = detalhes.get(grupo.pedido);
-        const valorRecebido = +grupo.valorRecebido.toFixed(2);
-
-        // Cálculo POR ITEM: base = PREÇO DE REFERÊNCIA do nosso banco (por
-        // SKU/variação × qtd); fallback para o vendido na Shopee quando o SKU
-        // não tem referência. Taxa fixa por unidade; faixa pela unidade;
-        // + afiliados. Sem detalhe, cai no valor do título do Tiny.
-        const r = calculaLiquidoV2(
-          detalhe?.composicao,
-          valorRecebido,
-          +titulo.conta.valor,
-          precosRef,
-        );
-
-        // Coluna de comparação: preço vendido na Shopee × base (referência).
-        // Alerta quando a venda diferiu da referência (e a referência foi usada).
-        const precoRef = r.baseShopee;
-        const divergeRef =
-          r.usouReferencia && Math.abs(r.baseShopee - r.base) >= 0.01;
-
-        return {
-          id_ecommerce: grupo.pedido,
-          sku: "",
-          preco_base: r.base,
-          precoRef,
-          divergeRef,
-          descricao_anuncio: detalhe?.cliente || grupo.cliente || grupo.pedido,
-          dt_criacao_pedido: dataCriacaoDoPedido(
-            grupo.pedido,
-            grupo.dataRecebimento,
-          ),
-          valor_recebido: valorRecebido,
-          valor_titulo: +titulo.conta.valor,
-          subisidio_pix: 0,
-          valor_calculado: r.liquido,
-          valor_taxas: r.taxa,
-          preco_com_rebate: r.base,
-          valor_rebate: 0,
-          cupom_rebate: 0,
-          historico: titulo.conta.historico,
-          cliente: titulo.conta.nome_cliente || grupo.cliente,
-          data_recebimento: isoParaDataBR(grupo.dataRecebimento),
-          documento: titulo.conta.numero_doc,
-          id: titulo.conta.id,
-          regra: r.regra,
-          // Negativo apenas para exibição (indica dedução no tooltip/alerta).
-          taxa_afiliados: -r.afiliados,
-          houveArredondamento: r.houveArredondamento,
-          detalheV2: r.detalhe,
-        };
+      // 4) Guarda os dados brutos; o cálculo das taxas é feito no useMemo.
+      setDadosConciliacao({
+        pares: pares.map((p) => ({
+          ...p,
+          detalhe: detalhes.get(p.grupo.pedido),
+        })),
+        precosRef,
       });
-
-      if (!cancelado) setRecebidosConciliados(conciliados);
     }
 
     conciliar(lancamentos, tituloAReceber).catch((err) => {
@@ -354,6 +398,14 @@ export default function TitulosEcommerceV2() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lancamentos, tituloAReceber]);
 
+  async function handleSalvarTaxas(faixas: FaixaComissao[]) {
+    await salvarTaxas(faixas);
+    toast.success(
+      "Taxas da Shopee salvas." +
+        (recebidosConciliados ? " Valores da lista recalculados." : ""),
+    );
+  }
+
   return (
     <div className="p-4">
       <div className="mb-6 flex items-center gap-3">
@@ -365,10 +417,19 @@ export default function TitulosEcommerceV2() {
         </span>
         <button
           type="button"
+          onClick={() => setModalTaxasAberto(true)}
+          title="Comissão e taxa fixa da Shopee por faixa de preço"
+          className="ml-auto flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20"
+        >
+          <Percent className="h-4 w-4" />
+          Taxas Shopee
+        </button>
+        <button
+          type="button"
           onClick={sincronizarPrecos}
           disabled={isSincronizando}
           title="Atualiza os preços base (anúncios Shopee → nosso banco)"
-          className="ml-auto flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <RefreshCw
             className={`h-4 w-4 ${isSincronizando ? "animate-spin" : ""}`}
@@ -389,6 +450,13 @@ export default function TitulosEcommerceV2() {
       {error && (
         <div className="mb-4 rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700">
           <strong>Erro:</strong> {error}
+        </div>
+      )}
+
+      {erroTaxas && (
+        <div className="mt-2 rounded border border-yellow-400 bg-yellow-100 p-3 text-yellow-800">
+          Não foi possível carregar as taxas salvas ({erroTaxas}). Os valores
+          estão sendo calculados com a tabela padrão.
         </div>
       )}
 
@@ -474,6 +542,13 @@ export default function TitulosEcommerceV2() {
           </ul>
         </div>
       )}
+
+      <ModalTaxasShopee
+        aberto={modalTaxasAberto}
+        onFechar={() => setModalTaxasAberto(false)}
+        taxas={taxas}
+        onSalvar={handleSalvarTaxas}
+      />
     </div>
   );
 }
