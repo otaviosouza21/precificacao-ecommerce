@@ -526,6 +526,7 @@ export default function TitulosEcommerceV2() {
             recebidosConciliados={recebidosConciliados}
             baseLabel="Preço Base"
             baseSublabel="Referência"
+            selecionarOk
           />
         </div>
       )}
