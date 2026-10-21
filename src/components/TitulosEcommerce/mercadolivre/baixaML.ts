@@ -15,7 +15,12 @@ import type { ConciliacaoML } from "./conciliaML";
  */
 
 export const CATEGORIA_BAIXA_ML = "Venda Mercado Livre";
-export const CONTA_DESTINO_ML = "Caixa";
+/**
+ * Conta financeira do Tiny onde o recebimento do ML é lançado. Tem de bater
+ * EXATAMENTE com o cadastro no Tiny — a API v2 não devolve a conta depois da
+ * baixa, então a grafia só se confirma olhando a primeira baixa no ERP.
+ */
+export const CONTA_DESTINO_ML = "Caixa Mercado Livre";
 
 /** Só pedido conferido pode ser baixado. */
 export function podeBaixar(item: ConciliacaoML): boolean {

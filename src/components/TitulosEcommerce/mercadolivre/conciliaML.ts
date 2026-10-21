@@ -212,15 +212,13 @@ export function taxaEfetiva(c: ConciliacaoML): number {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Data a partir da qual se ESPERA que toda venda tenha conta a receber no Tiny.
+ * Data a partir da qual o Tiny passou a gerar conta a receber de Mercado Livre.
  *
- * Não decide o regime da operação — isso é `separaPorPresenca`, pela presença
- * real do título. Esta data serve para detectar o contrário: venda posterior a
- * ela que chegou SEM título é anomalia, porque a integração deveria ter gerado.
- *
- * Medido em 13/10/2026: o Tiny emitiu o primeiro título de ML em 29/09, e das
- * 84 vendas de outubro no relatório apenas 16 tinham título — 68 pedidos
- * existem no ERP sem financeiro. É esse buraco que a data expõe.
+ * Só RÓTULO informativo na tela. Não decide nada: o regime da operação vem de
+ * `separaPorPresenca`, e o recebimento sem título NÃO é tratado como anomalia —
+ * a tela só enxerga títulos em aberto, então um pedido sem título pode ser venda
+ * anterior à integração OU um título que já foi baixado, e os dois são
+ * indistinguíveis aqui. Tratar como anomalia geraria alarme falso a cada baixa.
  */
 export const INICIO_GERACAO_TITULOS = "2026-10-01";
 
@@ -266,8 +264,6 @@ export type StatusConferencia =
   | "divergente"
   | "estornado"
   | "sem_pedido"
-  /** Venda posterior ao início da geração que chegou sem título: a integração falhou. */
-  | "titulo_faltando"
   /** A busca de pedidos no Tiny veio incompleta — não dá para afirmar nada. */
   | "nao_verificado";
 
@@ -343,13 +339,6 @@ export function conferenciaML(
       observacao =
         `O valor do pedido no Tiny (${valor_pedido.toFixed(2)}) não bate com o ` +
         `valor bruto usado pelo Mercado Livre (${rec.valor_bruto.toFixed(2)}).`;
-    } else if (rec.data_origem && rec.data_origem >= INICIO_GERACAO_TITULOS) {
-      // O pedido existe e os valores batem, mas não gerou conta a receber —
-      // e a venda é posterior à ativação da integração. Não deveria acontecer.
-      status = "titulo_faltando";
-      observacao =
-        `Venda de ${rec.data_origem} (após ${INICIO_GERACAO_TITULOS}), pedido ` +
-        `${pedidoTiny.numero} existe no Tiny mas não gerou conta a receber.`;
     } else {
       status = "confere";
     }

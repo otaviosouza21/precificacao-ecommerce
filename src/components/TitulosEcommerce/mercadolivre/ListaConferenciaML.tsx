@@ -7,7 +7,6 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  FileX,
   HelpCircle,
   Inbox,
   Loader2,
@@ -19,12 +18,12 @@ import type { ItemConferencia, StatusConferencia } from "./conciliaML";
 import { taxaEfetivaConferencia } from "./conciliaML";
 
 /**
- * Lista do modo CONFERÊNCIA.
+ * Lista da aba "Sem título no Tiny".
  *
  * Diferença essencial para `TituloListaML`: aqui a contraparte do recebimento é
- * o PEDIDO do Tiny, não o título — porque nos meses anteriores à ativação da
- * integração não existe conta a receber. Nenhum elemento de baixa é renderizado
- * (ausente, não desabilitado).
+ * o PEDIDO do Tiny, não o título — porque não há título em aberto para essas
+ * operações (venda anterior à integração, ou título já baixado). Nenhum elemento
+ * de baixa é renderizado (ausente, não desabilitado).
  */
 
 const BADGE: Record<
@@ -50,11 +49,6 @@ const BADGE: Record<
     label: "Sem pedido",
     classe: "bg-rose-100 text-rose-800 ring-1 ring-rose-600/20",
     icone: HelpCircle,
-  },
-  titulo_faltando: {
-    label: "Sem título",
-    classe: "bg-purple-100 text-purple-800 ring-1 ring-purple-600/20",
-    icone: FileX,
   },
   nao_verificado: {
     label: "Não verificado",
@@ -270,8 +264,8 @@ const LinhaConferencia = memo(function LinhaConferencia({
                 )}
 
                 <p className="mt-3 text-xs text-slate-500 bg-slate-100 border border-slate-200 rounded-lg p-2">
-                  Período de conferência: este recebimento não tem conta a
-                  receber no Tiny e não gera baixa.
+                  Sem título em aberto no Tiny — venda anterior à integração ou
+                  título já baixado. Não gera baixa.
                 </p>
               </div>
             </div>
