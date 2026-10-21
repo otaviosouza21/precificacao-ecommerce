@@ -102,7 +102,9 @@ export default function TituloTaxas({ item }: { item: ConciliacaoItem }) {
                     <span className="text-gray-600">
                       Comissão
                       {d.comissaoPerc != null
-                        ? ` (${(d.comissaoPerc * 100).toFixed(0)}%)`
+                        ? ` (${(d.comissaoPerc * 100).toLocaleString("pt-BR", {
+                            maximumFractionDigits: 2,
+                          })}%)`
                         : ""}
                       :
                     </span>
@@ -153,6 +155,17 @@ export default function TituloTaxas({ item }: { item: ConciliacaoItem }) {
                       <span className="text-gray-600">Arredondamento:</span>
                       <span className="font-semibold text-red-600">
                         - {brlConvert(0.01)}
+                      </span>
+                    </div>
+                  )}
+
+                  {d.arredondamentoShopee > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">
+                        Arredondamento Shopee:
+                      </span>
+                      <span className="font-semibold text-green-600">
+                        + {brlConvert(d.arredondamentoShopee)}
                       </span>
                     </div>
                   )}

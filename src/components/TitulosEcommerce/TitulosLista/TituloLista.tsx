@@ -6,6 +6,7 @@ import {
   AlertCircle,
   AlertTriangle,
   Inbox,
+  ListChecks,
 } from "lucide-react";
 import { ConciliacaoItem } from "../TitulosEcommerce";
 import { baixarTituloTiny } from "@/actions/baixaTituloTiny";
@@ -31,6 +32,8 @@ type TituloListaProps = {
   // A v2 usa o preço base direto da Shopee.
   baseLabel?: string;
   baseSublabel?: string;
+  // Exibe o botão "Selecionar OK" (só seleciona, não baixa). Usado na v2.
+  selecionarOk?: boolean;
 };
 
 // Payload compartilhado entre a baixa individual e a baixa em lote.
@@ -49,11 +52,23 @@ function montaPayloadBaixa(item: ConciliacaoItem) {
   };
 }
 
+// Título que bateu de primeira: valor confere e sem nenhum alerta
+// (arredondamento, taxa de afiliados ou venda diferente da referência).
+function tituloSemDivergencia(item: ConciliacaoItem) {
+  return (
+    item.valor_recebido === item.valor_calculado &&
+    !item.houveArredondamento &&
+    Number(item.taxa_afiliados) === 0 &&
+    !item.divergeRef
+  );
+}
+
 export default function TituloLista({
   recebidosConciliados,
   setAtualizar,
   baseLabel = "Tabela Tiny",
   baseSublabel = "Base",
+  selecionarOk = false,
 }: TituloListaProps) {
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
@@ -115,6 +130,25 @@ export default function TituloLista({
         : new Set(recebidosConciliados.map((item, idx) => `${item.id}-${idx}`)),
     );
   }, [recebidosConciliados, total]);
+
+  const idsOk = useMemo(
+    () =>
+      recebidosConciliados.flatMap((item, idx) =>
+        tituloSemDivergencia(item) ? [`${item.id}-${idx}`] : [],
+      ),
+    [recebidosConciliados],
+  );
+
+  const isOkSelecionados =
+    idsOk.length > 0 &&
+    selectedItems.size === idsOk.length &&
+    idsOk.every((id) => selectedItems.has(id));
+
+  // Substitui a seleção pelos títulos OK; com eles já marcados, desmarca.
+  const handleSelectOk = useCallback(() => {
+    if (idsOk.length === 0) return;
+    setSelectedItems(isOkSelecionados ? new Set() : new Set(idsOk));
+  }, [idsOk, isOkSelecionados]);
 
   const handleBaixarSelecionados = useCallback(async () => {
     if (selectedItems.size === 0) {
@@ -178,6 +212,20 @@ export default function TituloLista({
             )}
             {isAllSelected ? "Desmarcar todos" : "Selecionar todos"}
           </button>
+
+          {selecionarOk && (
+            <button
+              onClick={handleSelectOk}
+              disabled={idsOk.length === 0}
+              title="Seleciona os títulos com valor conferido, sem arredondamento, sem taxa de afiliados e sem divergência de preço de referência"
+              className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-emerald-700 rounded-lg hover:text-emerald-900 hover:bg-white/70 transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
+            >
+              <ListChecks className="h-4 w-4" />
+              {isOkSelecionados
+                ? "Desmarcar OK"
+                : `Selecionar OK (${idsOk.length})`}
+            </button>
+          )}
 
           {selectedItems.size > 0 && (
             <span className="text-sm text-slate-600">
@@ -370,6 +418,13 @@ const TituloRow = memo(function TituloRow({
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center">
           <span
+            title={
+              item.arredondamentoShopee
+                ? `Shopee arredondou para cima +${formatCurrency(
+                    item.arredondamentoShopee,
+                  )}`
+                : undefined
+            }
             className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
               isValorCompativel
                 ? "bg-green-100 text-green-800 ring-1 ring-green-600/20"

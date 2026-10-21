@@ -2,14 +2,16 @@
 
 import { Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import TabelaFaixasEditor from "@/components/TaxasShopee/TabelaFaixasEditor";
+import { MARKETPLACE_SHOPEE_ID, PARAMETROS_PADRAO } from "./defaults";
 import { FaixaComissao, Marketplace, ParametrosCalculadora } from "./types";
 
 type Props = {
   aberto: boolean;
   onFechar: () => void;
   parametros: ParametrosCalculadora;
-  onSalvar: (p: ParametrosCalculadora) => void;
-  onRestaurarPadrao: () => void;
+  // Pode lançar (ex.: tabela da Shopee recusada pela API) — o erro é exibido.
+  onSalvar: (p: ParametrosCalculadora) => Promise<void>;
 };
 
 function gerarId(prefixo: string) {
@@ -21,17 +23,19 @@ export default function ModalParametros({
   onFechar,
   parametros,
   onSalvar,
-  onRestaurarPadrao,
 }: Props) {
   const [rascunho, setRascunho] = useState<ParametrosCalculadora>(parametros);
   const [mpAtivo, setMpAtivo] = useState<string>(
     parametros.marketplaces[0]?.id ?? ""
   );
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     if (aberto) {
       setRascunho(parametros);
       setMpAtivo(parametros.marketplaces[0]?.id ?? "");
+      setErro(null);
     }
   }, [aberto, parametros]);
 
@@ -51,58 +55,8 @@ export default function ModalParametros({
     }));
   }
 
-  function atualizarFaixa(
-    mpId: string,
-    faixaId: string,
-    alt: Partial<FaixaComissao>
-  ) {
-    setRascunho((prev) => ({
-      ...prev,
-      marketplaces: prev.marketplaces.map((m) =>
-        m.id !== mpId
-          ? m
-          : {
-              ...m,
-              faixas: m.faixas.map((f) =>
-                f.id === faixaId ? { ...f, ...alt } : f
-              ),
-            }
-      ),
-    }));
-  }
-
-  function adicionarFaixa(mpId: string) {
-    setRascunho((prev) => ({
-      ...prev,
-      marketplaces: prev.marketplaces.map((m) =>
-        m.id !== mpId
-          ? m
-          : {
-              ...m,
-              faixas: [
-                ...m.faixas,
-                {
-                  id: gerarId("faixa"),
-                  precoMin: 0,
-                  precoMax: null,
-                  comissaoPct: 0,
-                  taxaFixa: 0,
-                },
-              ],
-            }
-      ),
-    }));
-  }
-
-  function removerFaixa(mpId: string, faixaId: string) {
-    setRascunho((prev) => ({
-      ...prev,
-      marketplaces: prev.marketplaces.map((m) =>
-        m.id !== mpId
-          ? m
-          : { ...m, faixas: m.faixas.filter((f) => f.id !== faixaId) }
-      ),
-    }));
+  function atualizarFaixas(mpId: string, faixas: FaixaComissao[]) {
+    atualizarMarketplace(mpId, { faixas });
   }
 
   function adicionarMarketplace() {
@@ -127,15 +81,32 @@ export default function ModalParametros({
   }
 
   function removerMarketplace(id: string) {
-    if (rascunho.marketplaces.length <= 1) return;
+    if (rascunho.marketplaces.length <= 1 || id === MARKETPLACE_SHOPEE_ID) {
+      return;
+    }
     const restantes = rascunho.marketplaces.filter((m) => m.id !== id);
     setRascunho((prev) => ({ ...prev, marketplaces: restantes }));
     if (mpAtivo === id) setMpAtivo(restantes[0].id);
   }
 
-  function salvar() {
-    onSalvar(rascunho);
-    onFechar();
+  function restaurarPadrao() {
+    setRascunho(PARAMETROS_PADRAO);
+    setMpAtivo(PARAMETROS_PADRAO.marketplaces[0]?.id ?? "");
+  }
+
+  async function salvar() {
+    setSalvando(true);
+    setErro(null);
+    try {
+      await onSalvar(rascunho);
+      onFechar();
+    } catch (err) {
+      setErro(
+        err instanceof Error ? err.message : "Erro ao salvar os parâmetros."
+      );
+    } finally {
+      setSalvando(false);
+    }
   }
 
   return (
@@ -250,7 +221,10 @@ export default function ModalParametros({
                   <button
                     type="button"
                     onClick={() => removerMarketplace(marketplaceAtivo.id)}
-                    disabled={rascunho.marketplaces.length <= 1}
+                    disabled={
+                      rascunho.marketplaces.length <= 1 ||
+                      marketplaceAtivo.id === MARKETPLACE_SHOPEE_ID
+                    }
                     className="self-end flex items-center gap-1 text-xs bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white px-2.5 py-2 rounded"
                     title="Remover marketplace"
                   >
@@ -258,116 +232,36 @@ export default function ModalParametros({
                   </button>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-sky-300 text-left border-b border-white/10">
-                        <th className="px-2 py-2 font-medium">Preço Mín.</th>
-                        <th className="px-2 py-2 font-medium">
-                          Preço Máx. (vazio = ∞)
-                        </th>
-                        <th className="px-2 py-2 font-medium">Comissão (%)</th>
-                        <th className="px-2 py-2 font-medium">Taxa Fixa (R$)</th>
-                        <th className="px-2 py-2"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {marketplaceAtivo.faixas.map((f) => (
-                        <tr key={f.id} className="border-b border-white/5">
-                          <td className="px-2 py-1">
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={f.precoMin}
-                              onChange={(e) =>
-                                atualizarFaixa(marketplaceAtivo.id, f.id, {
-                                  precoMin: parseFloat(e.target.value) || 0,
-                                })
-                              }
-                              className="w-24 bg-sky-950 border border-sky-700 rounded px-2 py-1 text-white text-right"
-                            />
-                          </td>
-                          <td className="px-2 py-1">
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={f.precoMax ?? ""}
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                atualizarFaixa(marketplaceAtivo.id, f.id, {
-                                  precoMax: v === "" ? null : parseFloat(v),
-                                });
-                              }}
-                              placeholder="∞"
-                              className="w-24 bg-sky-950 border border-sky-700 rounded px-2 py-1 text-white text-right"
-                            />
-                          </td>
-                          <td className="px-2 py-1">
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={f.comissaoPct}
-                              onChange={(e) =>
-                                atualizarFaixa(marketplaceAtivo.id, f.id, {
-                                  comissaoPct: parseFloat(e.target.value) || 0,
-                                })
-                              }
-                              className="w-24 bg-sky-950 border border-sky-700 rounded px-2 py-1 text-white text-right"
-                            />
-                          </td>
-                          <td className="px-2 py-1">
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={f.taxaFixa}
-                              onChange={(e) =>
-                                atualizarFaixa(marketplaceAtivo.id, f.id, {
-                                  taxaFixa: parseFloat(e.target.value) || 0,
-                                })
-                              }
-                              className="w-24 bg-sky-950 border border-sky-700 rounded px-2 py-1 text-white text-right"
-                            />
-                          </td>
-                          <td className="px-2 py-1 text-right">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                removerFaixa(marketplaceAtivo.id, f.id)
-                              }
-                              className="text-red-400 hover:text-red-300"
-                              title="Remover faixa"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {marketplaceAtivo.id === MARKETPLACE_SHOPEE_ID && (
+                  <p className="mb-3 text-xs text-amber-300">
+                    Tabela compartilhada: as faixas da Shopee também são usadas
+                    na baixa de títulos V2 e valem para todos os usuários.
+                  </p>
+                )}
 
-                <button
-                  type="button"
-                  onClick={() => adicionarFaixa(marketplaceAtivo.id)}
-                  className="mt-3 flex items-center gap-1 text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-2.5 py-1.5 rounded"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Adicionar faixa
-                </button>
+                <TabelaFaixasEditor
+                  faixas={marketplaceAtivo.faixas}
+                  onChange={(faixas) =>
+                    atualizarFaixas(marketplaceAtivo.id, faixas)
+                  }
+                />
               </div>
             )}
           </section>
         </div>
 
+        {erro && (
+          <div className="mx-5 mb-3 rounded border border-red-400 bg-red-100 px-3 py-2 text-sm text-red-700">
+            {erro}
+          </div>
+        )}
+
         <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-white/10">
           <button
             type="button"
-            onClick={onRestaurarPadrao}
+            onClick={restaurarPadrao}
             className="flex items-center gap-1 text-xs text-sky-300 hover:text-white"
-            title="Restaurar configurações originais"
+            title="Preenche com as configurações originais — clique em Salvar para aplicar"
           >
             <RotateCcw className="w-3.5 h-3.5" /> Restaurar padrão
           </button>
@@ -382,9 +276,10 @@ export default function ModalParametros({
             <button
               type="button"
               onClick={salvar}
-              className="text-sm bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded"
+              disabled={salvando}
+              className="text-sm bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded"
             >
-              Salvar
+              {salvando ? "Salvando..." : "Salvar"}
             </button>
           </div>
         </div>

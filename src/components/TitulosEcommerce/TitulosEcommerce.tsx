@@ -31,6 +31,8 @@ export type ConciliacaoItem = {
   regra: RegraComissao;
   taxa_afiliados: number;
   houveArredondamento: boolean;
+  // Quanto a Shopee pagou a mais que o cálculo (até 0,02). Só a v2 preenche.
+  arredondamentoShopee?: number;
   subisidio_pix: number;
   // Detalhamento por item (só a v2 preenche; usado no tooltip de taxas).
   detalheV2?: DetalheTaxasV2;
