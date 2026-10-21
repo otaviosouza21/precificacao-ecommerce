@@ -159,6 +159,17 @@ export default function TituloTaxas({ item }: { item: ConciliacaoItem }) {
                     </div>
                   )}
 
+                  {d.arredondamentoShopee > 0 && (
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600">
+                        Arredondamento Shopee:
+                      </span>
+                      <span className="font-semibold text-green-600">
+                        + {brlConvert(d.arredondamentoShopee)}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center text-sm border-t border-gray-100 pt-2">
                     <span className="text-gray-600">Total de taxas:</span>
                     <span className="font-semibold text-red-600">

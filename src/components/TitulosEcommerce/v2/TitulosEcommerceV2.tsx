@@ -167,6 +167,7 @@ function montaConciliacao(
     // Negativo apenas para exibição (indica dedução no tooltip/alerta).
     taxa_afiliados: -r.afiliados,
     houveArredondamento: r.houveArredondamento,
+    arredondamentoShopee: r.arredondamentoShopee,
     detalheV2: r.detalhe,
   };
 }

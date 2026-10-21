@@ -33,6 +33,7 @@ export interface DetalheTaxasV2 {
   afiliadosServico: number;
   afiliados: number;
   taxaTotal: number;
+  arredondamentoShopee: number;
   liquido: number;
 }
 
@@ -45,6 +46,7 @@ export interface ResultadoCalculoV2 {
   afiliados: number;
   regra: RegraComissao;
   houveArredondamento: boolean;
+  arredondamentoShopee: number; // quanto a Shopee pagou a mais (0 a 0,02)
   detalhe: DetalheTaxasV2;
 }
 
@@ -181,6 +183,16 @@ export function calculaLiquidoV2(
     houveArredondamento = true;
   }
 
+  // A Shopee vem arredondando PARA CIMA (ex.: fórmula 19,98 → pago 20,00).
+  // Recebendo a mais, a baixa no Tiny fecha 100% → aceita até +0,02 como OK.
+  // A taxa não muda (vai ao Tiny como calculada); só o líquido vira o recebido.
+  let arredondamentoShopee = 0;
+  const sobra = +(valorRecebido - liquido).toFixed(2);
+  if (sobra > 0 && sobra <= 0.02) {
+    arredondamentoShopee = sobra;
+    liquido = valorRecebido;
+  }
+
   return {
     base,
     baseShopee,
@@ -190,6 +202,7 @@ export function calculaLiquidoV2(
     afiliados,
     regra: regraRepresentativa ?? regraPorFaixas(base, faixas),
     houveArredondamento,
+    arredondamentoShopee,
     detalhe: {
       base,
       comissaoPerc: percs.size === 1 ? [...percs][0] : null,
@@ -202,6 +215,7 @@ export function calculaLiquidoV2(
       afiliadosServico,
       afiliados,
       taxaTotal: taxa,
+      arredondamentoShopee,
       liquido,
     },
   };

@@ -418,6 +418,13 @@ const TituloRow = memo(function TituloRow({
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center">
           <span
+            title={
+              item.arredondamentoShopee
+                ? `Shopee arredondou para cima +${formatCurrency(
+                    item.arredondamentoShopee,
+                  )}`
+                : undefined
+            }
             className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-all ${
               isValorCompativel
                 ? "bg-green-100 text-green-800 ring-1 ring-green-600/20"
