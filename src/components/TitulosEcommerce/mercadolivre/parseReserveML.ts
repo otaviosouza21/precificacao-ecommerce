@@ -39,7 +39,7 @@ export interface RecebimentoML {
   linhas: number;
   /** Tipos de movimento encontrados (Pagamento, Mediação, Devolução...). */
   tipos: string[];
-  /** Líquido zero ou negativo: venda cancelada/contestada. Nunca pode ser baixada. */
+  /** Líquido zero: venda cancelada/contestada. Nunca pode ser baixada. */
   estornado: boolean;
   /** IDs da operação no Mercado Pago (dedup entre relatórios). */
   operacoes: string[];
@@ -302,10 +302,8 @@ export default function parseReserveML(dados: PlanilhaML): ResultadoParseML {
       custo_envio: round(r.custo_envio),
       tarifa_parcelamento: round(r.tarifa_parcelamento),
       cupom: round(r.cupom),
-      // Estorno: entrou e saiu (zero) ou saiu mais do que entrou (negativo:
-      // devolução em que o vendedor ainda pagou o frete de volta). Vendas
-      // canceladas/contestadas — nada a receber.
-      estornado: valor_recebido < 0.01,
+      // Estorno: entrou e saiu. São vendas canceladas/contestadas.
+      estornado: Math.abs(valor_recebido) < 0.01,
     };
   });
 

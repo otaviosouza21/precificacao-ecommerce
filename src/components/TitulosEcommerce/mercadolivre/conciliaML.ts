@@ -152,9 +152,7 @@ export function conciliaML(
     if (rec.estornado) {
       status = "estornado";
       observacao =
-        valor_recebido < 0
-          ? `Venda devolvida: saiu mais do que entrou (saldo ${valor_recebido.toFixed(2)}). Não há o que receber.`
-          : "Venda cancelada ou contestada: o dinheiro entrou e saiu, saldo líquido zero.";
+        "Venda cancelada ou contestada: o dinheiro entrou e saiu, saldo líquido zero.";
     } else if (faltamParcelas) {
       status = "parcelas_faltando";
       observacao =
@@ -165,13 +163,6 @@ export function conciliaML(
       observacao =
         `A soma dos títulos (${valor_titulos.toFixed(2)}) não bate com o valor ` +
         `bruto da operação no Mercado Livre (${rec.valor_bruto.toFixed(2)}).`;
-    } else if (valor_recebido > valor_titulos + TOLERANCIA) {
-      // Ex.: liberação de reserva de disputa + devolução do frete no mesmo
-      // pedido. A "taxa" sairia negativa na baixa do Tiny.
-      status = "divergente";
-      observacao =
-        `O recebido (${valor_recebido.toFixed(2)}) é maior que a soma dos títulos ` +
-        `(${valor_titulos.toFixed(2)}): a taxa ficaria negativa. Confira o pedido no Mercado Pago.`;
     } else {
       status = "ok";
     }
