@@ -23,6 +23,12 @@ import { formatCurrency, formatDate } from "../functions/formataDados";
 import BaixaButton from "@/components/Ui/Forms/BaixaButton";
 import { CopyButton } from "@/components/Ui/CopyButton";
 import TituloTaxas from "./TituloTaxas";
+import {
+  baixaFechaTitulo,
+  montaPayloadBaixa,
+  podeBaixarTitulo,
+  tituloSemDivergencia,
+} from "./regrasBaixa";
 
 type TituloListaProps = {
   recebidosConciliados: ConciliacaoItem[];
@@ -35,33 +41,6 @@ type TituloListaProps = {
   // Exibe o botão "Selecionar OK" (só seleciona, não baixa). Usado na v2.
   selecionarOk?: boolean;
 };
-
-// Payload compartilhado entre a baixa individual e a baixa em lote.
-function montaPayloadBaixa(item: ConciliacaoItem) {
-  return {
-    id: item.id,
-    data_recebimento: item.data_recebimento,
-    categoria: "Venda Shopee",
-    historico: "",
-    valorPago: item.valor_recebido,
-    contaDestino: "Caixa",
-    valorAcrescimo: 0,
-    valorDesconto: 0,
-    valorJuros: 0,
-    valorTaxas: item.valor_taxas,
-  };
-}
-
-// Título que bateu de primeira: valor confere e sem nenhum alerta
-// (arredondamento, taxa de afiliados ou venda diferente da referência).
-function tituloSemDivergencia(item: ConciliacaoItem) {
-  return (
-    item.valor_recebido === item.valor_calculado &&
-    !item.houveArredondamento &&
-    Number(item.taxa_afiliados) === 0 &&
-    !item.divergeRef
-  );
-}
 
 export default function TituloLista({
   recebidosConciliados,
@@ -80,7 +59,7 @@ export default function TituloLista({
 
   const baixaTitulo = useCallback(
     (titulo: ConciliacaoItem, index: number) => {
-      if (titulo.valor_calculado !== titulo.valor_recebido) {
+      if (!podeBaixarTitulo(titulo)) {
         toast.error(
           "O valor recebido é diferente do valor calculado, não é possivel baixar o título",
         );
@@ -159,10 +138,17 @@ export default function TituloLista({
     setIsProcessing(true);
     let sucessos = 0;
     let erros = 0;
+    let bloqueados = 0;
 
     for (let idx = 0; idx < recebidosConciliados.length; idx++) {
       const item = recebidosConciliados[idx];
       if (!selectedItems.has(`${item.id}-${idx}`)) continue;
+
+      // Mesma trava da baixa individual: divergente nunca vai ao Tiny.
+      if (!podeBaixarTitulo(item)) {
+        bloqueados++;
+        continue;
+      }
 
       try {
         const retorno = await baixarTituloTiny(montaPayloadBaixa(item));
@@ -182,6 +168,11 @@ export default function TituloLista({
     }
     if (erros > 0) {
       toast.error(`${erros} título(s) falharam ao baixar`);
+    }
+    if (bloqueados > 0) {
+      toast.warning(
+        `${bloqueados} título(s) divergente(s) não foram baixados: o valor recebido é diferente do calculado`,
+      );
     }
   }, [recebidosConciliados, selectedItems, setAtualizar]);
 
@@ -217,7 +208,7 @@ export default function TituloLista({
             <button
               onClick={handleSelectOk}
               disabled={idsOk.length === 0}
-              title="Seleciona os títulos com valor conferido, sem arredondamento, sem taxa de afiliados e sem divergência de preço de referência"
+              title="Seleciona os títulos com valor conferido, sem arredondamento, sem taxa de afiliados, sem divergência de preço de referência e cuja baixa quita o título no Tiny"
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-emerald-700 rounded-lg hover:text-emerald-900 hover:bg-white/70 transition-colors disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent"
             >
               <ListChecks className="h-4 w-4" />
@@ -374,9 +365,19 @@ const TituloRow = memo(function TituloRow({
   onSelect,
   onBaixar,
 }: TituloRowProps) {
-  const isValorCompativel = item.valor_recebido === item.valor_calculado;
+  const isValorCompativel = podeBaixarTitulo(item);
   const temTaxaAfiliados = Number(item.taxa_afiliados) !== 0;
-  const temAlerta = temTaxaAfiliados || item.houveArredondamento;
+  // Só faz sentido alertar quando o valor confere: divergente já não baixa.
+  const naoFechaTitulo = isValorCompativel && !baixaFechaTitulo(item);
+  const alertas = [
+    temTaxaAfiliados && "Possui taxa de afiliados",
+    item.houveArredondamento && "Possui arredondamento de 0,01",
+    naoFechaTitulo &&
+      `Título do Tiny (${formatCurrency(item.valor_titulo)}) diferente de pago + taxas (${formatCurrency(
+        item.valor_recebido + item.valor_taxas,
+      )}): a baixa não quita o título. Confira antes de baixar.`,
+  ].filter(Boolean) as string[];
+  const temAlerta = alertas.length > 0;
 
   return (
     <tr
@@ -443,13 +444,7 @@ const TituloRow = memo(function TituloRow({
           {temAlerta && (
             <div
               className="ml-2 text-red-500 cursor-help"
-              title={
-                temTaxaAfiliados && item.houveArredondamento
-                  ? "Possui taxa de afiliados e arredondamento de 0,01"
-                  : temTaxaAfiliados
-                    ? "Possui taxa de afiliados"
-                    : "Possui arredondamento de 0,01"
-              }
+              title={alertas.join(" · ")}
             >
               <AlertCircle className="h-4 w-4" />
             </div>

@@ -36,7 +36,10 @@ export function motivoBloqueio(item: ConciliacaoML): string | null {
     case "parcelas_faltando":
       return "Faltam parcelas em aberto. Baixar parte do pedido deixaria o saldo errado.";
     case "divergente":
-      return "A soma dos títulos não bate com o valor da operação no Mercado Livre.";
+      return (
+        item.observacao ??
+        "A soma dos títulos não bate com o valor da operação no Mercado Livre."
+      );
     default:
       return "Pedido não conferido.";
   }
@@ -85,6 +88,11 @@ export function montaPayloadsBaixaML(item: ConciliacaoML): BaixaTituloParams[] {
 
 /** Confere o rateio antes de enviar: as duas igualdades têm de fechar. */
 export function validaRateio(item: ConciliacaoML): string | null {
+  // Sem data válida o Tiny recebe "Invalid Date" (a coluna de liberação é opcional).
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(item.recebimento.data_liberacao || "")) {
+    return "Pedido sem data de liberação na planilha. Reexporte o relatório com todas as colunas.";
+  }
+
   const payloads = montaPayloadsBaixaML(item);
 
   const somaPago = +payloads.reduce((a, p) => a + p.valorPago, 0).toFixed(2);
@@ -101,6 +109,10 @@ export function validaRateio(item: ConciliacaoML): string | null {
 
   if (payloads.some((p) => p.valorPago < 0)) {
     return "Rateio inconsistente: alguma parcela ficou com valor pago negativo.";
+  }
+
+  if (payloads.some((p) => (p.valorTaxas ?? 0) < 0)) {
+    return "Rateio inconsistente: alguma parcela ficou com taxa negativa (recebido maior que o título).";
   }
 
   return null;

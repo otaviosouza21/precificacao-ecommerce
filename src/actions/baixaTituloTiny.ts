@@ -73,12 +73,23 @@ export async function baixarTituloTiny({
       revalidateTag("all-titulos");
       return { success: true, message: "Título baixado com sucesso" };
     } else {
-      const erros = data.retorno?.registros?.[0]?.registro?.erros?.map(
-        (e: Error) => e.message
-      ) || [data.retorno?.erro] || ["Erro na baixa do título"];
+      // O Tiny v2 devolve os erros em retorno.erros[].erro (ou, em alguns
+      // endpoints, em registros[0].registro.erros[].erro).
+      type ErroTiny = { erro?: string; message?: string };
+      const listas: ErroTiny[][] = [
+        data.retorno?.erros,
+        data.retorno?.registros?.[0]?.registro?.erros,
+      ].filter(Array.isArray);
+      const erros = listas
+        .flat()
+        .map((e) => e?.erro || e?.message)
+        .filter((m): m is string => Boolean(m));
       return {
         success: false,
-        message: erros.join("; "),
+        message:
+          erros.join("; ") ||
+          data.retorno?.erro ||
+          `Erro na baixa do título (HTTP ${response.status})`,
       };
     }
   } catch (error) {
