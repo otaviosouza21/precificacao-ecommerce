@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Percent, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { buscarTitulosAbertosV2 } from "@/actions/buscarTitulosAbertosV2";
@@ -13,16 +13,14 @@ import {
   type LancamentoRenda,
 } from "@/lib/financeiro";
 import { toast } from "react-toastify";
-import {
-  listarPrecosAnuncios,
-  sincronizarPrecosAnuncios,
-} from "@/lib/anuncios";
+import { sincronizarPrecosAnuncios } from "@/lib/anuncios";
 import { useTaxasShopee, type FaixaComissao } from "@/lib/taxasShopee";
+import { calcularConciliacaoShopee } from "@/lib/conciliacao/api";
 import ModalTaxasShopee from "@/components/TaxasShopee/ModalTaxasShopee";
 import TituloLista from "../TitulosLista/TituloLista";
 import { ConciliacaoItem } from "../TitulosEcommerce";
 import PeriodoRendaForm from "./PeriodoRendaForm";
-import { calculaLiquidoV2 } from "./calculoV2";
+import type { ResultadoCalculoV2 } from "./calculoV2";
 
 // ---------------------------------------------------------------------------
 // Helpers de data
@@ -101,8 +99,8 @@ function agrupaPorPedido(itens: LancamentoRenda[]): GrupoRenda[] {
 // ---------------------------------------------------------------------------
 
 // Dados brutos da conciliação (renda × título × detalhe Shopee). O cálculo das
-// taxas fica fora daqui para refazer na hora quando a tabela de taxas muda,
-// sem buscar tudo de novo na Shopee.
+// taxas é feito pela API (fonte única, o mesmo da rotina automática) e pode
+// ser refeito sem buscar tudo de novo na Shopee (ex.: tabela de taxas mudou).
 type ParConciliado = {
   grupo: GrupoRenda;
   titulo: TitulosReceberApiTiny;
@@ -111,27 +109,33 @@ type ParConciliado = {
 
 type DadosConciliacao = {
   pares: ParConciliado[];
-  precosRef: Map<string, number>;
+  // Resultado do cálculo da API por pedido (order_sn).
+  resultados: Map<string, ResultadoCalculoV2>;
 };
+
+// Pede à API o cálculo de todos os pares (preço de referência e tabela de
+// taxas atuais do banco).
+async function calcularPares(
+  token: string | null | undefined,
+  pares: ParConciliado[],
+): Promise<Map<string, ResultadoCalculoV2>> {
+  const resp = await calcularConciliacaoShopee(
+    token,
+    pares.map(({ grupo, titulo, detalhe }) => ({
+      pedido: grupo.pedido,
+      valorRecebido: +grupo.valorRecebido.toFixed(2),
+      valorTitulo: +titulo.conta.valor,
+      composicao: detalhe?.composicao,
+    })),
+  );
+  return new Map(resp.itens.map((i) => [i.pedido, i.resultado]));
+}
 
 function montaConciliacao(
   { grupo, titulo, detalhe }: ParConciliado,
-  precosRef: Map<string, number>,
-  faixas: FaixaComissao[],
+  r: ResultadoCalculoV2,
 ): ConciliacaoItem {
   const valorRecebido = +grupo.valorRecebido.toFixed(2);
-
-  // Cálculo POR ITEM: base = PREÇO DE REFERÊNCIA do nosso banco (por
-  // SKU/variação × qtd); fallback para o vendido na Shopee quando o SKU
-  // não tem referência. Taxa fixa por unidade; faixa pela unidade (tabela
-  // "Taxas Shopee"); + afiliados. Sem detalhe, cai no valor do título do Tiny.
-  const r = calculaLiquidoV2(
-    detalhe?.composicao,
-    valorRecebido,
-    +titulo.conta.valor,
-    precosRef,
-    faixas,
-  );
 
   // Coluna de comparação: preço vendido na Shopee × base (referência).
   // Alerta quando a venda diferiu da referência (e a referência foi usada).
@@ -178,7 +182,6 @@ export default function TitulosEcommerceV2() {
   const { token } = useAuth();
   const {
     taxas,
-    pronto: taxasProntas,
     erroCarga: erroTaxas,
     salvar: salvarTaxas,
   } = useTaxasShopee();
@@ -198,14 +201,38 @@ export default function TitulosEcommerceV2() {
   const [dadosConciliacao, setDadosConciliacao] =
     useState<DadosConciliacao | null>(null);
 
-  // Recalcula na hora quando a tabela de taxas muda. Espera a tabela carregar
-  // para nunca mostrar valores calculados com a tabela errada.
+  // Monta a lista a partir do cálculo da API (pares sem resultado ficam fora,
+  // o que só acontece se a API não devolveu o pedido).
   const recebidosConciliados = useMemo<ConciliacaoItem[] | null>(() => {
-    if (!dadosConciliacao || !taxasProntas) return null;
-    return dadosConciliacao.pares.map((par) =>
-      montaConciliacao(par, dadosConciliacao.precosRef, taxas.faixas),
-    );
-  }, [dadosConciliacao, taxasProntas, taxas.faixas]);
+    if (!dadosConciliacao) return null;
+    return dadosConciliacao.pares.flatMap((par) => {
+      const r = dadosConciliacao.resultados.get(par.grupo.pedido);
+      return r ? [montaConciliacao(par, r)] : [];
+    });
+  }, [dadosConciliacao]);
+
+  const [isCalculando, setIsCalculando] = useState(false);
+
+  // Refaz o cálculo na API com os mesmos pares (sem buscar a Shopee de novo):
+  // usado depois de salvar a tabela de taxas ou atualizar os preços base.
+  const recalcular = useCallback(async () => {
+    const pares = dadosConciliacao?.pares;
+    if (!pares || pares.length === 0) return;
+    setIsCalculando(true);
+    try {
+      const resultados = await calcularPares(token, pares);
+      setDadosConciliacao({ pares, resultados });
+    } catch (err) {
+      console.error("Erro ao recalcular a conciliação:", err);
+      toast.error(
+        err instanceof FinanceiroApiError
+          ? err.message
+          : "Não foi possível recalcular os valores.",
+      );
+    } finally {
+      setIsCalculando(false);
+    }
+  }, [dadosConciliacao, token]);
 
   const [isLoadingTitulos, setIsLoadingTitulos] = useState(false);
   const [isBuscandoRenda, setIsBuscandoRenda] = useState(false);
@@ -230,8 +257,9 @@ export default function TitulosEcommerceV2() {
       const { total } = await sincronizarPrecosAnuncios(token);
       toast.success(
         `Preços base atualizados: ${total} anúncios.` +
-          (recebidosConciliados ? " Clique em Buscar renda para aplicar." : ""),
+          (recebidosConciliados ? " Valores da lista recalculados." : ""),
       );
+      await recalcular();
     } catch (err) {
       console.error("Erro ao sincronizar preços dos anúncios:", err);
       toast.error("Não foi possível atualizar os preços base.");
@@ -330,42 +358,23 @@ export default function TitulosEcommerceV2() {
 
       if (pares.length === 0) {
         if (!cancelado) {
-          setDadosConciliacao({ pares: [], precosRef: new Map() });
+          setDadosConciliacao({ pares: [], resultados: new Map() });
         }
         return;
       }
 
-      // 3) Detalhe financeiro de cada pedido (Shopee) + preços de referência
-      //    (nosso banco), em PARALELO — o preço fica escondido atrás da janela
-      //    das chamadas de detalhe.
+      // 3) Detalhe financeiro de cada pedido (Shopee).
       setIsDetalhando(true);
       setProgresso({ feito: 0, total: pares.length });
-      const [{ detalhes, falhas }, precosRef] = await Promise.all([
-        detalharVariosPedidos(
-          token,
-          pares.map((p) => p.grupo.pedido),
-          {
-            onProgress: (feito, total) => {
-              if (!cancelado) setProgresso({ feito, total });
-            },
+      const { detalhes, falhas } = await detalharVariosPedidos(
+        token,
+        pares.map((p) => p.grupo.pedido),
+        {
+          onProgress: (feito, total) => {
+            if (!cancelado) setProgresso({ feito, total });
           },
-        ),
-        listarPrecosAnuncios(token)
-          .then((resp) => {
-            const mapa = new Map<string, number>();
-            for (const p of resp.itens) {
-              const preco = p.precoAtual ?? p.precoOriginal;
-              if (p.sku && preco != null) {
-                mapa.set(p.sku.trim().toUpperCase(), preco);
-              }
-            }
-            return mapa;
-          })
-          .catch((err) => {
-            console.error("Erro ao carregar preços de referência:", err);
-            return new Map<string, number>();
-          }),
-      ]);
+        },
+      );
       if (cancelado) return;
       setIsDetalhando(false);
 
@@ -375,21 +384,31 @@ export default function TitulosEcommerceV2() {
         );
       }
 
-      // 4) Guarda os dados brutos; o cálculo das taxas é feito no useMemo.
-      setDadosConciliacao({
-        pares: pares.map((p) => ({
-          ...p,
-          detalhe: detalhes.get(p.grupo.pedido),
-        })),
-        precosRef,
-      });
+      // 4) Cálculo das taxas na API (preço de referência e tabela de taxas
+      //    do banco — o mesmo cálculo da rotina automática).
+      const paresComDetalhe = pares.map((p) => ({
+        ...p,
+        detalhe: detalhes.get(p.grupo.pedido),
+      }));
+      setIsCalculando(true);
+      try {
+        const resultados = await calcularPares(token, paresComDetalhe);
+        if (cancelado) return;
+        setDadosConciliacao({ pares: paresComDetalhe, resultados });
+      } finally {
+        if (!cancelado) setIsCalculando(false);
+      }
     }
 
     conciliar(lancamentos, tituloAReceber).catch((err) => {
       console.error("Erro durante conciliação:", err);
       if (!cancelado) {
         setIsDetalhando(false);
-        setError("Erro durante o processo de conciliação");
+        setError(
+          err instanceof FinanceiroApiError
+            ? `Erro ao calcular a conciliação: ${err.message}`
+            : "Erro durante o processo de conciliação",
+        );
       }
     });
 
@@ -405,6 +424,8 @@ export default function TitulosEcommerceV2() {
       "Taxas da Shopee salvas." +
         (recebidosConciliados ? " Valores da lista recalculados." : ""),
     );
+    // A API calcula com a tabela salva no banco: refaz a lista.
+    await recalcular();
   }
 
   return (
@@ -456,8 +477,9 @@ export default function TitulosEcommerceV2() {
 
       {erroTaxas && (
         <div className="mt-2 rounded border border-yellow-400 bg-yellow-100 p-3 text-yellow-800">
-          Não foi possível carregar as taxas salvas ({erroTaxas}). Os valores
-          estão sendo calculados com a tabela padrão.
+          Não foi possível carregar as taxas salvas ({erroTaxas}). A edição de
+          taxas está mostrando a tabela padrão (os valores da lista são
+          calculados pela API com a tabela salva).
         </div>
       )}
 
@@ -505,6 +527,13 @@ export default function TitulosEcommerceV2() {
             Buscando preço base na Shopee... ({progresso.feito}/
             {progresso.total})
           </span>
+        </div>
+      )}
+
+      {isCalculando && !isDetalhando && (
+        <div className="flex items-center justify-center py-8">
+          <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-emerald-500"></div>
+          <span className="ml-2 text-gray-600">Calculando taxas...</span>
         </div>
       )}
 
