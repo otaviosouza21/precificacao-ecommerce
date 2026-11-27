@@ -34,7 +34,9 @@ export interface ResultadoItemConciliacao {
   classificacao: {
     categoria: CategoriaConciliacao;
     alertas: CategoriaConciliacao[];
+    // recebido + taxas − saldo do título (> 0 = subsídio da Shopee; < 0 = falta).
     diferencaTitulo: number;
+    subsidioShopee: number;
     divergeReferencia: boolean;
   };
 }
